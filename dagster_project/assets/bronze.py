@@ -2,6 +2,7 @@ from dagster import asset
 import yfinance as yf
 import polars as pl
 from pathlib import Path
+import pandas as pd
 
 TICKER = "AAPL"
 START_DATE = "2015-01-01"
@@ -18,6 +19,9 @@ def raw_ohlcv_aapl() -> str:
 
     if df.empty:
         raise ValueError(f"No data for {TICKER} in range {START_DATE}–{END_DATE}")
+
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = ['_'.join(filter(None, col)).strip() for col in df.columns]
 
     # Convert to Polars
     df.reset_index(inplace=True)
