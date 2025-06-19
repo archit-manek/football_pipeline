@@ -1,47 +1,36 @@
-# Momentum Pipeline Project (Dagster + Polars)
+# ⚽ Soccer Analytics Pipeline
 
-## Medallion Pipeline Architecture
+A modular data pipeline for ingesting, transforming, and engineering features from football (soccer) match event data using Medallion architecture and modern Python tooling.
 
-### Bronze Layer: Raw Ingestion
-- Fetches OHLCV data for AAPL (2015–2025) from Yahoo Finance
-- Flattens multi-index columns if necessary
-- Saves raw data to `data/bronze/` as Parquet
-
-### Silver Layer: Clean + Enrich
-- Reads Bronze parquet
-- Fixes column names
-- Converts dates to datetime
-- Sorts chronologically
-- Drops nulls
-- Computes `daily_log_return`
-- Saves clean data to `data/silver/`
-
-### Gold Layer (Planned):
-- Calculate 20-day rolling return (momentum)
-- Rank tickers daily by momentum
-- Select top 10% as signal candidates
-- Compute forward 10-day return to evaluate signal quality
-
-## Tools Used
-
-| Tool       | Why It Was Used |
-|------------|------------------|
-| [Dagster](https://dagster.io) | Modern orchestration & asset tracking |
-| [Polars](https://pola.rs)     | Fast, expressive DataFrame engine |
-| [Parquet](https://parquet.apache.org/) | Efficient columnar storage format |
-| [yfinance](https://github.com/ranaroussi/yfinance) | Pull historical OHLCV data |
+This project is designed to serve as the foundation for building analytics and machine learning models (e.g., xG, player performance analysis) on top of structured event data.
 
 ---
 
-## How to Run It
+## 🧠 Architecture
 
-### 1. Clone and set up environment, run with Dagster UI:
+The pipeline follows the **Medallion architecture** with three layers of transformation:
 
-```bash
-git clone https://github.com/yourname/momentum-pipeline.git
-cd momentum-pipeline
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+- **Bronze**: Raw JSON files from StatsBomb Open Data
+- **Silver**: Cleaned, flattened, and normalized event data (e.g., shots, passes)
+- **Gold**: Engineered features ready for downstream analytics and model training (e.g., shot angle, distance, goal label)
 
-dagster dev -f dagster_project/repositories.py
+All transformations are orchestrated with **Dagster** and processed with **Polars** for high-performance data manipulation.
+
+---
+
+## 🔧 Technologies Used
+
+- **Dagster** – orchestration framework for data pipelines
+- **Polars** – fast DataFrame engine for parsing and transformation
+- **Parquet** – columnar data format for Silver and Gold layers
+- **StatsBomb Open Data** – publicly available football match data
+
+---
+
+## 🗂️ Data Flow
+
+```text
+data/
+├── bronze/    <- Raw match/event JSONs (from StatsBomb)
+├── silver/    <- Normalized event-level data (e.g. shots.parquet)
+└── gold/      <- Features for modeling (e.g. xG-ready tables)
