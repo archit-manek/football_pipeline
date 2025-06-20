@@ -32,5 +32,5 @@ All transformations are orchestrated with **Dagster** and processed with **Polar
 ```text
 data/
 ├── bronze/    <- Raw match/event JSONs (from StatsBomb)
-├── silver/    <- Normalized event-level data (e.g. shots.parquet)
+├── silver/    <- Normalized event-level data (e.g. matches.parquet)
 └── gold/      <- Features for modeling (e.g. xG-ready tables)
