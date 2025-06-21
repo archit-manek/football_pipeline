@@ -21,7 +21,7 @@ All transformations are orchestrated with **Dagster** and processed with **Polar
 ## 🔧 Technologies Used
 
 - **Dagster** – orchestration framework for data pipelines
-- **Polars** – fast DataFrame engine for parsing and transformation
+- **Pandas** – DataFrame engine for parsing and transformation
 - **Parquet** – columnar data format for Silver and Gold layers
 - **StatsBomb Open Data** – publicly available football match data
 
