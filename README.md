@@ -1,4 +1,4 @@
-## Soccer Analytics Pipeline
+## Football Analytics Pipeline
 
 A modular data pipeline for ingesting, transforming, and engineering features from football (soccer) match event data.
 
