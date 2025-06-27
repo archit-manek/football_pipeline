@@ -1,4 +1,4 @@
-# ⚽ Soccer Analytics Pipeline
+# Soccer Analytics Pipeline
 
 A modular data pipeline for ingesting, transforming, and engineering features from football (soccer) match event data using Medallion architecture and modern Python tooling.
 
@@ -6,28 +6,26 @@ This project is designed to serve as the foundation for building analytics and m
 
 ---
 
-## 🧠 Architecture
+## Architecture
 
 The pipeline follows the **Medallion architecture** with three layers of transformation:
 
+Current Approach:
 - **Bronze**: Raw JSON files from StatsBomb Open Data
 - **Silver**: Cleaned, flattened, and normalized event data (e.g., shots, passes)
 - **Gold**: Engineered features ready for downstream analytics and model training (e.g., shot angle, distance, goal label)
 
-All transformations are orchestrated with **Dagster** and processed with **Polars** for high-performance data manipulation.
-
 ---
 
-## 🔧 Technologies Used
+## Technologies Used So Far
 
-- **Dagster** – orchestration framework for data pipelines
 - **Pandas** – DataFrame engine for parsing and transformation
 - **Parquet** – columnar data format for Silver and Gold layers
 - **StatsBomb Open Data** – publicly available football match data
 
 ---
 
-## 🗂️ Data Flow
+## Data Flow
 
 ```text
 data/
