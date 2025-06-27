@@ -1,34 +1,34 @@
-# Soccer Analytics Pipeline
+## Soccer Analytics Pipeline
 
-A modular data pipeline for ingesting, transforming, and engineering features from football (soccer) match event data using Medallion architecture and modern Python tooling.
+A modular data pipeline for ingesting, transforming, and engineering features from football (soccer) match event data.
 
-This project is designed to serve as the foundation for building analytics and machine learning models (e.g., xG, player performance analysis) on top of structured event data.
-
----
-
-## Architecture
-
-The pipeline follows the **Medallion architecture** with three layers of transformation:
-
-Current Approach:
-- **Bronze**: Raw JSON files from StatsBomb Open Data
-- **Silver**: Cleaned, flattened, and normalized event data (e.g., shots, passes)
-- **Gold**: Engineered features ready for downstream analytics and model training (e.g., shot angle, distance, goal label)
+Built using Medallion architecture and modern Python tooling, this project is designed as a foundation for building analytics and machine learning models, such as xG estimation and player performance analysis on structured event data.
 
 ---
 
-## Technologies Used So Far
+### Architecture
 
-- **Pandas** – DataFrame engine for parsing and transformation
-- **Parquet** – columnar data format for Silver and Gold layers
-- **StatsBomb Open Data** – publicly available football match data
+The pipeline uses a three layer Medallion structure:
+
+* **Bronze** – Raw StatsBomb JSON files
+* **Silver** – Cleaned and normalized tables (e.g., shots, passes)
+* **Gold** – Feature-engineered tables for modeling (e.g., shot angle, distance, goal label)
 
 ---
 
-## Data Flow
+### Technologies Used
 
-```text
+* `pandas` for transformation
+* `parquet` for silver/gold storage
+* StatsBomb Open Data for event-level input
+
+---
+
+### Data Directory Layout
+
+```
 data/
-├── bronze/    <- Raw match/event JSONs (from StatsBomb)
-├── silver/    <- Normalized event-level data (e.g. matches.parquet)
-└── gold/      <- Features for modeling (e.g. xG-ready tables)
+├── bronze/    # Raw match/event JSONs (from StatsBomb)
+├── silver/    # Normalized data tables (e.g., matches.parquet)
+└── gold/      # Engineered features ready for ML
+```
