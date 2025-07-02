@@ -8,6 +8,6 @@ os.makedirs("logs/bronze", exist_ok=True)
 os.makedirs("logs/silver", exist_ok=True)
 
 if __name__ == "__main__":
-    bronze_ingest()
+    # bronze_ingest()
     enrich_pass_data()
     # gold_transform()
