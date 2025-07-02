@@ -177,7 +177,9 @@ cython_debug/
 tmp*/
 
 # Raw and processed data
-data/raw
+data/
+docs/
 *.parquet
 *.csv
 *.json
+.DS_Store

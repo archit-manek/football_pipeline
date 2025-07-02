@@ -1,124 +1,121 @@
+import logging
 from pathlib import Path
-import json
-import time
 import polars as pl
-from utils.io import safe_from_dicts
+import pandas as pd
+import warnings
+from utils.config import *
+import json
 
-RAW_DIR = Path("data/raw")
-BRONZE_DIR = Path("data/bronze")
-BRONZE_DIR.mkdir(parents=True, exist_ok=True)
+# Logging setup
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("logs/bronze/pipeline.log", mode="w"),
+        logging.StreamHandler()
+    ]
+)
 
+def ingest_competitions_local():
+    competitions_path = Path("data/raw/competitions.json")
+    if competitions_path.exists():
+        with open(competitions_path, "r") as f:
+            competitions = json.load(f)
+        df = pd.DataFrame(competitions)
+        pl.from_pandas(df).write_parquet(BRONZE_DIR_COMPETITIONS / "competitions.parquet")
+        logging.info(f"Saved competitions to {BRONZE_DIR_COMPETITIONS / 'competitions.parquet'}")
+    else:
+        logging.warning("No competitions.json found in data/raw/.")
 
-def get_valid_match_ids():
-    """
-    Get all valid match IDs from the matches JSON files.
-
-    Returns:
-        df_matches: DataFrame containing match data with normalized fields.
-        valid_ids: Set of valid match IDs.
-    """
-    matches = []
-    for match_file in RAW_DIR.glob("matches/**/*.json"):
-        with open(match_file) as f:
-            matches += json.load(f)
-
-    # Normalize only the top-level fields (including match_id)
-    df_matches = pl.from_dicts(matches)
-
-    return df_matches, set(df_matches["match_id"])
-
-def load_events(valid_match_ids):
-    event_dir = RAW_DIR / "events"
-    bronze_event_dir = BRONZE_DIR / "events"
-    bronze_event_dir.mkdir(parents=True, exist_ok=True)
-
-    for path in event_dir.glob("*.json"):
-        match_id = int(path.stem)
-        if match_id not in valid_match_ids:
+def ingest_matches_local():
+    matches_dir = Path("data/raw/matches")
+    for json_file in matches_dir.glob("*/*.json"):  # Look in subfolders
+        comp_id = json_file.parent.name
+        season_id = json_file.stem
+        matches_path = BRONZE_DIR_MATCHES / f"matches_{comp_id}_{season_id}.parquet"
+        if matches_path.exists():
+            logging.debug(f"{matches_path} already exists, skipping.")
             continue
+        with open(json_file, "r") as f:
+            data = json.load(f)
+        if data:
+            df = pd.DataFrame(data)
+            pl.from_pandas(df).write_parquet(matches_path)
+            logging.info(f"Saved matches to {matches_path}")
+        else:
+            logging.info(f"No matches found for competition {comp_id}, season {season_id}")
 
-        with open(path) as f:
-            events = json.load(f)
-            for ev in events:
-                ev["match_id"] = match_id
-
-        if events:
-            df = pl.from_dicts(events)
-            df.write_parquet(bronze_event_dir / f"{match_id}.parquet")
-
-    print("All per-match event files written.")
-
-def load_lineups(valid_match_ids):
-    """
-    Load lineups from JSON files, filtering by valid match IDs.
-
-    Args:
-        valid_match_ids: Set of valid match IDs to filter events.
-
-    Returns:
-        df: DataFrame containing all lineups with match_id included.
-    """
-    lineup_rows = []
-    for path in (RAW_DIR / "lineups").glob("*.json"):
-        match_id = int(path.stem)
-        if match_id not in valid_match_ids:
+def ingest_lineups_local():
+    lineups_dir = Path("data/raw/lineups")
+    bronze_lineups_dir = BRONZE_DIR_LINEUPS
+    bronze_lineups_dir.mkdir(parents=True, exist_ok=True)
+    for json_file in lineups_dir.glob("*.json"):
+        match_id = json_file.stem
+        parquet_path = bronze_lineups_dir / f"lineups_{match_id}.parquet"
+        if parquet_path.exists():
+            logging.debug(f"{parquet_path} already exists, skipping.")
             continue
-        with open(path) as f:
-            teams = json.load(f)
-            for team in teams:
-                if "team" not in team or "lineup" not in team:
-                    continue
+        with open(json_file, "r") as f:
+            data = json.load(f)
+        all_teams = []
+        for team in data:
+            lineup_df = pd.json_normalize(team["lineup"])
+            lineup_df["match_id"] = match_id
+            lineup_df["team_id"] = team["team_id"]
+            all_teams.append(lineup_df)
+        if all_teams:
+            combined = pd.concat(all_teams, ignore_index=True)
+            pl.from_pandas(combined).write_parquet(parquet_path)
+            logging.info(f"Saved lineups for match {match_id} to {parquet_path}")
+        else:
+            logging.info(f"No lineups found for match {match_id}")
 
-                team_id = team["team"]["id"]
-                for player in team["lineup"]:
-                    row = {
-                        **player,
-                        "match_id": match_id,
-                        "team_id": team_id
-                    }
-                    lineup_rows.append(row)
-        schema = {
-        "match_id": pl.Int64,
-        "team_id": pl.Int64,
-        "player_id": pl.Int64,
-        "player_name": pl.Utf8,
-        "position": pl.Utf8,
-        "jersey_number": pl.Int64
-    }
-    return safe_from_dicts(lineup_rows, schema=schema) # type: ignore
+def ingest_events_local():
+    events_dir = Path("data/raw/events")
+    bronze_events_dir = BRONZE_DIR_EVENTS
+    bronze_events_dir.mkdir(parents=True, exist_ok=True)
+    for json_file in events_dir.glob("*.json"):
+        match_id = json_file.stem
+        events_path = bronze_events_dir / f"events_{match_id}.parquet"
+        if events_path.exists():
+            logging.debug(f"File {events_path} already exists, skipping.")
+            continue
+        with open(json_file, "r") as f:
+            data = json.load(f)
+        if data:
+            df = pd.json_normalize(data)
+            pl.from_pandas(df).write_parquet(events_path)
+            logging.info(f"Saved events for match {match_id} to {events_path}")
+        else:
+            logging.info(f"No events found for match {match_id}")
 
-def write_parquet(df: pl.DataFrame, name: str, overwrite: bool = False):
-    """
-    Write a DataFrame to a Parquet file in the bronze layer.
-
-    Args:
-        df (pl.DataFrame): DataFrame to write.
-        name (str): Name of the Parquet file (without extension).
-        overwrite (bool, optional): Whether to overwrite existing file. Defaults to False.
-    """
-    path = Path(f"data/bronze/{name}.parquet")
-    df.write_parquet(path)
-    print(f"{name}.parquet written.")
+def ingest_360_events_local():
+    raw_360_dir = Path("data/raw/three-sixty")
+    bronze_360_dir = BRONZE_DIR_360_EVENTS / "events_360"
+    bronze_360_dir.mkdir(parents=True, exist_ok=True)
+    for json_file in raw_360_dir.glob("*.json"):
+        match_id = json_file.stem
+        parquet_path = bronze_360_dir / f"events_360_{match_id}.parquet"
+        if parquet_path.exists():
+            logging.debug(f"{parquet_path} already exists, skipping.")
+            continue
+        try:
+            with open(json_file, "r") as f:
+                data = json.load(f)
+            if data:
+                df = pd.json_normalize(data)
+                pl.from_pandas(df).write_parquet(parquet_path)
+                logging.info(f"Saved 360 events for match {match_id} to {parquet_path}")
+            else:
+                logging.info(f"No 360 data for match {match_id}")
+        except json.JSONDecodeError as e:
+            logging.warning(f"Could not decode JSON for match {match_id} in file {json_file}: {e}")
+        except Exception as e:
+            logging.warning(f"Error processing 360 data for match {match_id} in file {json_file}: {e}")
 
 def bronze_ingest():
-    """
-    Ingests raw data into the bronze layer by loading matches, events, and lineups.
-    """
-    # TODO: Add a check to see if data is loaded correctly
-    # TODO: Ingest three-sixty data if using freeze frames later
-    print("→ Loading matches")
-    start = time.time()
-    df_matches, valid_ids = get_valid_match_ids()
-    write_parquet(df_matches, "matches")
-    print(f"Matches loaded in {time.time() - start:.2f} sec")
-
-    print("→ Loading events")
-    start = time.time()
-    load_events(valid_ids)
-    print(f"Events loaded in {time.time() - start:.2f} sec")
-
-    print("→ Loading lineups")
-    start = time.time()
-    df_lineups = load_lineups(valid_ids)
-    write_parquet(df_lineups, "lineups")
-    print(f"Lineups loaded in {time.time() - start:.2f} sec")
+    ingest_competitions_local()
+    ingest_matches_local()
+    ingest_lineups_local()
+    ingest_events_local()
+    ingest_360_events_local()

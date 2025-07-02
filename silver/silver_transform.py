@@ -65,7 +65,7 @@ def enrich_pass_data(df):
     # 5. Assign back to main df
     df.loc[is_pass, ["end_x", "end_y"]] = normalized_ends.values
 
-    # 6. Optional: recipient column for convenience
+    # 6. Recipient column for convenience
     if "pass.recipient.name" in df.columns:
         df["recipient"] = df["pass.recipient.name"]
 
