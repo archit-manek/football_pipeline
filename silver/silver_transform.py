@@ -5,7 +5,6 @@ import numpy as np
 from pathlib import Path
 from utils.config import *
 from itertools import islice
-import shutil
 
 logging.basicConfig(
     level=logging.INFO,
@@ -73,11 +72,6 @@ def enrich_locations(df):
     df.loc[is_pass, ["end_x", "end_y"]] = normalized_ends.values
     return df
 
-def enrich_recipient(df):
-    if "pass.recipient.name" in df.columns:
-        df["recipient"] = df["pass.recipient.name"]
-    return df
-
 def enrich_pass_features(df):
     df = add_pass_length_angle(df)
     if "pass_angle_calc" in df.columns:
@@ -106,14 +100,13 @@ def enrich_pass_data():
     else:
         silver_events_dir.mkdir(parents=True, exist_ok=True)
 
-    # Limit to first 5 files for testing
+    # Limit to first 50 files for testing
     for parquet_file in islice(bronze_events_dir.glob("*.parquet"), 50):
         match_id = parquet_file.stem.replace("events_", "")
         logging.info(f"Processing match {match_id} from {parquet_file}")
         try:
             df = pd.read_parquet(parquet_file)
             df = enrich_locations(df)
-            df = enrich_recipient(df)
             df = enrich_pass_features(df)
             df = flatten_columns(df)
             pl.from_pandas(df).write_parquet(silver_events_dir / f"events_{match_id}.parquet")
