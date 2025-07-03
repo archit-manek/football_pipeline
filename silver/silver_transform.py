@@ -84,6 +84,38 @@ def flatten_columns(df):
     df.columns = [col.replace('.', '_') for col in df.columns]
     return df
 
+def add_possession_stats(df):
+    # Number of events in each possession
+    event_count = df.groupby('possession').size().rename('possession_event_count')
+    # Number of passes in each possession
+    pass_count = df[df['type_name'] == 'Pass'].groupby('possession').size().rename('possession_pass_count')
+    # Number of unique players in each possession
+    player_count = df.groupby('possession')['player_id'].nunique().rename('possession_player_count')
+    # Possession duration (if you have a 'timestamp' column)
+    if 'timestamp' in df.columns:
+        duration = df.groupby('possession')['timestamp'].agg(lambda x: (x.max() - x.min()).total_seconds()).rename('possession_duration')
+    else:
+        duration = None
+    # Did the possession end with a shot?
+    ended_with_shot = df.groupby('possession')['type_name'].apply(lambda x: (x == 'Shot').any()).rename('possession_ended_with_shot')
+    # Total xG in the possession (if you have an xG column)
+    if 'shot_statsbomb_xg' in df.columns:
+        possession_xg = df.groupby('possession')['shot_statsbomb_xg'].sum().rename('possession_xg')
+    else:
+        possession_xg = None
+
+    # Merge all stats back to the main DataFrame
+    df = df.merge(event_count, left_on='possession', right_index=True, how='left')
+    df = df.merge(pass_count, left_on='possession', right_index=True, how='left')
+    df = df.merge(player_count, left_on='possession', right_index=True, how='left')
+    if duration is not None:
+        df = df.merge(duration, left_on='possession', right_index=True, how='left')
+    df = df.merge(ended_with_shot, left_on='possession', right_index=True, how='left')
+    if possession_xg is not None:
+        df = df.merge(possession_xg, left_on='possession', right_index=True, how='left')
+
+    return df
+
 def enrich_pass_data():
     logging.info("Starting pass data enrichment process.")
     bronze_events_dir = Path(BRONZE_DIR_EVENTS)
@@ -106,9 +138,11 @@ def enrich_pass_data():
         logging.info(f"Processing match {match_id} from {parquet_file}")
         try:
             df = pd.read_parquet(parquet_file)
+            df['timestamp'] = pd.to_datetime(df['timestamp'], format='%H:%M:%S.%f')
             df = enrich_locations(df)
             df = enrich_pass_features(df)
             df = flatten_columns(df)
+            df = add_possession_stats(df)
             pl.from_pandas(df).write_parquet(silver_events_dir / f"events_{match_id}.parquet")
             logging.info(f"Saved enriched events for match {match_id} to {silver_events_dir / f'events_{match_id}.parquet'}")
         except Exception as e:
