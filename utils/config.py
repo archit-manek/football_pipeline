@@ -1,6 +1,9 @@
 # filepath: utils/config.py
 from pathlib import Path
 
+# Absolute path to the project root
+ABS_PATH = Path("/Users/architmanek/Desktop/DataEngineering/football_pipeline")
+
 # Define directories (BRONZE)
 BRONZE_DIR = Path("data/bronze")
 BRONZE_DIR_MATCHES = BRONZE_DIR / "matches"
@@ -13,6 +16,9 @@ BRONZE_DIR_360_EVENTS = BRONZE_DIR / "360_events"
 SILVER_DIR = Path("data/silver")
 SILVER_DIR_EVENTS = SILVER_DIR / "events"
 
+# Define directories (GOLD)
+GOLD_DIR = Path("data/gold")
+
 # Ensure directories exist (BRONZE)
 BRONZE_DIR.mkdir(parents=True, exist_ok=True)
 BRONZE_DIR_MATCHES.mkdir(parents=True, exist_ok=True)
@@ -24,3 +30,6 @@ BRONZE_DIR_360_EVENTS.mkdir(parents=True, exist_ok=True)
 # Ensure directories exist (SILVER)
 SILVER_DIR.mkdir(parents=True, exist_ok=True)
 SILVER_DIR_EVENTS.mkdir(parents=True, exist_ok=True)
+
+# Ensure directories exist (GOLD)
+GOLD_DIR.mkdir(parents=True, exist_ok=True)

@@ -10,4 +10,4 @@ os.makedirs("logs/silver", exist_ok=True)
 if __name__ == "__main__":
     # bronze_ingest()
     process_match_data()
-    # gold_transform()
+    # aggregate_match_data()
