@@ -1,8 +1,6 @@
 import logging
 from pathlib import Path
 import polars as pl
-import pandas as pd
-import warnings
 from utils.config import *
 import json
 
@@ -21,15 +19,15 @@ def ingest_competitions_local():
     if competitions_path.exists():
         with open(competitions_path, "r") as f:
             competitions = json.load(f)
-        df = pd.DataFrame(competitions)
-        pl.from_pandas(df).write_parquet(BRONZE_DIR_COMPETITIONS / "competitions.parquet")
+        df = pl.DataFrame(competitions)
+        df.write_parquet(BRONZE_DIR_COMPETITIONS / "competitions.parquet")
         logging.info(f"Saved competitions to {BRONZE_DIR_COMPETITIONS / 'competitions.parquet'}")
     else:
         logging.warning("No competitions.json found in data/raw/.")
 
 def ingest_matches_local():
     matches_dir = Path("data/raw/matches")
-    for json_file in matches_dir.glob("*/*.json"):  # Look in subfolders
+    for json_file in matches_dir.glob("*/*.json"):
         comp_id = json_file.parent.name
         season_id = json_file.stem
         matches_path = BRONZE_DIR_MATCHES / f"matches_{comp_id}_{season_id}.parquet"
@@ -39,8 +37,8 @@ def ingest_matches_local():
         with open(json_file, "r") as f:
             data = json.load(f)
         if data:
-            df = pd.DataFrame(data)
-            pl.from_pandas(df).write_parquet(matches_path)
+            df = pl.DataFrame(data)
+            df.write_parquet(matches_path)
             logging.info(f"Saved matches to {matches_path}")
         else:
             logging.info(f"No matches found for competition {comp_id}, season {season_id}")
@@ -59,13 +57,15 @@ def ingest_lineups_local():
             data = json.load(f)
         all_teams = []
         for team in data:
-            lineup_df = pd.json_normalize(team["lineup"])
-            lineup_df["match_id"] = match_id
-            lineup_df["team_id"] = team["team_id"]
-            all_teams.append(lineup_df)
+            # Flatten lineup dicts for each team
+            lineup = team["lineup"]
+            for player in lineup:
+                player["match_id"] = match_id
+                player["team_id"] = team["team_id"]
+            all_teams.extend(lineup)
         if all_teams:
-            combined = pd.concat(all_teams, ignore_index=True)
-            pl.from_pandas(combined).write_parquet(parquet_path)
+            df = pl.DataFrame(all_teams)
+            df.write_parquet(parquet_path)
             logging.info(f"Saved lineups for match {match_id} to {parquet_path}")
         else:
             logging.info(f"No lineups found for match {match_id}")
@@ -83,8 +83,8 @@ def ingest_events_local():
         with open(json_file, "r") as f:
             data = json.load(f)
         if data:
-            df = pd.json_normalize(data)
-            pl.from_pandas(df).write_parquet(events_path)
+            df = pl.DataFrame(data)
+            df.write_parquet(events_path)
             logging.info(f"Saved events for match {match_id} to {events_path}")
         else:
             logging.info(f"No events found for match {match_id}")
@@ -97,14 +97,15 @@ def ingest_360_events_local():
         match_id = json_file.stem
         parquet_path = bronze_360_dir / f"events_360_{match_id}.parquet"
         if parquet_path.exists():
-            logging.debug(f"{parquet_path} already exists, skipping.")
-            continue
+            logging.info(f"{parquet_path} already exists, overwriting.")
+        else:
+            logging.info(f"Creating new parquet for {match_id} at {parquet_path}")
         try:
             with open(json_file, "r") as f:
                 data = json.load(f)
             if data:
-                df = pd.json_normalize(data)
-                pl.from_pandas(df).write_parquet(parquet_path)
+                df = pl.DataFrame(data)
+                df.write_parquet(parquet_path)
                 logging.info(f"Saved 360 events for match {match_id} to {parquet_path}")
             else:
                 logging.info(f"No 360 data for match {match_id}")

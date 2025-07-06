@@ -1,4 +1,3 @@
-import pandas as pd
 import polars as pl
 import logging
 import numpy as np
@@ -17,99 +16,29 @@ logging.basicConfig(
 
 ### Location Normalization Functions ###
 
-def normalize_location(location, x_max=120, y_max=80):
-    logging.debug(f"Normalizing location: {location}")
-    try:
-        if location is None:
-            logging.debug(f"Location is None: {location}")
-            return [None, None]
-        
-        # Handle numpy arrays properly
-        if isinstance(location, np.ndarray):
-            if location.size == 0 or np.any(pd.isna(location)):
-                logging.debug(f"Location array is empty or contains NaN: {location}")
-                return [None, None]
-        
-        if isinstance(location, (list, tuple, np.ndarray)) and len(location) == 2:
-            x, y = location
-            result = [x / x_max, y / y_max]
-            logging.debug(f"Normalized location: {result}")
-            return result
-        else:
-            logging.debug(f"Invalid location format: {location}, type: {type(location)}")
-            return [None, None]
-    except Exception as e:
-        logging.debug(f"Error normalizing location {location}: {e}")
-        return [None, None]
-
-def normalize_end_location(location, x_max=120, y_max=80):
-    logging.debug(f"Normalizing end location: {location}")
-    try:
-        if location is None:
-            logging.debug(f"End location is None: {location}")
-            return [None, None]
-        
-        # Handle numpy arrays properly
-        if isinstance(location, np.ndarray):
-            if location.size == 0 or np.any(pd.isna(location)):
-                logging.debug(f"End location array is empty or contains NaN: {location}")
-                return [None, None]
-        
-        if isinstance(location, (list, tuple, np.ndarray)) and len(location) == 2:
-            x, y = location
-            result = [x / x_max, y / y_max]
-            logging.debug(f"Normalized end location: {result}")
-            return result
-        else:
-            logging.debug(f"Invalid end location format: {location}, type: {type(location)}")
-            return [None, None]
-    except Exception as e:
-        logging.debug(f"Error normalizing end location {location}: {e}")
-        return [None, None]
-
 def enrich_locations(df):
-    """Enrich locations
-
-    Args:
-        df (pd.DataFrame): DataFrame with pass data
-
-    Returns:
-        pd.DataFrame: DataFrame with pass features. Added so far:
-        - x: Normalized x coordinate
-        - y: Normalized y coordinate
-    """
-    # Initialize coordinate columns
-    df["x"] = None
-    df["y"] = None
-    df["end_x"] = None
-    df["end_y"] = None
-    
-    # Process start locations
-    for idx in df.index:
-        location = df.at[idx, "location"]
-        if location is not None and not (isinstance(location, (list, tuple, np.ndarray)) and len(location) == 0):
-            normalized = normalize_location(location)
-            if normalized != [None, None]:
-                df.at[idx, "x"] = normalized[0]
-                df.at[idx, "y"] = normalized[1]
-    
-    # Process end locations for passes
-    is_pass = (df["type_name"] == "Pass") & df["pass_end_location"].notnull()
-    for idx in df[is_pass].index:
-        end_location = df.at[idx, "pass_end_location"]
-        if end_location is not None and not (isinstance(end_location, (list, tuple, np.ndarray)) and len(end_location) == 0):
-            normalized = normalize_end_location(end_location)
-            if normalized != [None, None]:
-                df.at[idx, "end_x"] = normalized[0]
-                df.at[idx, "end_y"] = normalized[1]
-    
+    df = df.with_columns([
+        pl.col("location").cast(pl.Array(pl.Float64, 2)).alias("location"),
+        pl.col("pass_end_location").cast(pl.Array(pl.Float64, 2)).alias("pass_end_location"),
+    ])
+    df = df.with_columns([
+        (pl.col("location").arr.get(0) / 120).alias("x"),
+        (pl.col("location").arr.get(1) / 80).alias("y"),
+        pl.when(pl.col("type_name") == "Pass")
+          .then(pl.col("pass_end_location").arr.get(0) / 120)
+          .otherwise(None)
+          .alias("end_x"),
+        pl.when(pl.col("type_name") == "Pass")
+          .then(pl.col("pass_end_location").arr.get(1) / 80)
+          .otherwise(None)
+          .alias("end_y"),
+    ])
     return df
 
 ### Column Flattening Functions ###
 
 def flatten_columns(df):
-    df.columns = [col.replace('.', '_') for col in df.columns]
-    return df
+    return df.rename({col: col.replace('.', '_') for col in df.columns})
 
 ### Possession Stats Functions ###
 
@@ -129,28 +58,40 @@ def add_possession_stats(df):
     """
     
     # Calculate event count per possession
-    df['timestamp'] = pd.to_datetime(df['timestamp'], format='%H:%M:%S.%f')
-    event_count = df.groupby('possession').size().rename('possession_event_count')
+    event_count = df.group_by("possession").agg(
+        pl.count().alias("possession_event_count")
+    )
 
     # Number of passes in each possession
-    possession_pass_count = df[df['type_name'] == 'Pass'].groupby('possession').size().rename('possession_pass_count')
+    pass_count = (
+        df.filter(pl.col("type_name") == "Pass")
+        .group_by("possession")
+        .agg(pl.count().alias("possession_pass_count"))
+    )
 
     # Number of unique players in each possession
-    possession_player_count = df.groupby('possession')['player_id'].nunique().rename('possession_player_count')
+    player_count = df.group_by("possession").agg(
+        pl.col("player_id").n_unique().alias("possession_player_count")
+    )
+    
+    # Possession duration (in seconds)
+    duration = df.group_by("possession").agg(
+        (pl.col("timestamp").max() - pl.col("timestamp").min()).dt.total_seconds().alias("possession_duration")
+    )
 
-    # Calculate possession duration
-    possession_duration = df.groupby('possession')['timestamp'].max() - df.groupby('possession')['timestamp'].min()
-    possession_duration = possession_duration.dt.total_seconds().rename('possession_duration')
-
-    # Total xG in the possession
-    total_xg = df[df['type_name'] == "Shot"].groupby('possession')['shot_statsbomb_xg'].sum().rename('total_xG')
+    # Total xG per possession
+    total_xg = (
+        df.filter(pl.col("type_name") == "Shot")
+        .group_by("possession")
+        .agg(pl.col("shot_statsbomb_xg").sum().alias("total_xG"))
+    )
 
     # Merge it back into the main DataFrame as a new column
-    df = df.merge(event_count, left_on='possession', right_index=True, how='left')
-    df = df.merge(possession_pass_count, left_on='possession', right_index=True, how='left')
-    df = df.merge(possession_player_count, left_on='possession', right_index=True, how='left')
-    df = df.merge(possession_duration, left_on='possession', right_index=True, how='left')
-    df = df.merge(total_xg, left_on='possession', right_index=True, how='left')
+    df = df.join(event_count, on="possession", how="left")
+    df = df.join(pass_count, on="possession", how="left")
+    df = df.join(player_count, on="possession", how="left")
+    df = df.join(duration, on="possession", how="left")
+    df = df.join(total_xg, on="possession", how="left")
 
     return df
 
@@ -170,15 +111,16 @@ def process_match_data():
     else:
         silver_events_dir.mkdir(parents=True, exist_ok=True)
 
-    # Limit to first 50 files for testing
     for parquet_file in bronze_events_dir.glob("*.parquet"):
         match_id = parquet_file.stem.replace("events_", "")
         logging.info(f"Processing match {match_id} from {parquet_file}")
         try:
-            df = pd.read_parquet(parquet_file)
+            df = pl.read_parquet(parquet_file)
             logging.info(f"Loaded {len(df)} events for match {match_id}")
             
-            df['timestamp'] = pd.to_datetime(df['timestamp'], format='%H:%M:%S.%f')
+            df = df.with_columns(
+                pl.col("timestamp").str.strptime(pl.Datetime, "%H:%M:%S.%f", strict=False)
+            )
             logging.info(f"Processed timestamps for match {match_id}")
             
             df = flatten_columns(df)
@@ -190,7 +132,7 @@ def process_match_data():
             df = add_possession_stats(df)
             logging.info(f"Added possession stats for match {match_id}")
             
-            pl.from_pandas(df).write_parquet(silver_events_dir / f"events_{match_id}.parquet")
+            df.write_parquet(silver_events_dir / f"events_{match_id}.parquet")
             logging.info(f"Saved enriched events for match {match_id} to {silver_events_dir / f'events_{match_id}.parquet'}")
         except Exception as e:
             logging.warning(f"Failed to process match {match_id}: {e}")
