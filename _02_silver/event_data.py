@@ -2,7 +2,7 @@ import polars as pl
 import logging
 import numpy as np
 from pathlib import Path
-from utils.config import *
+from utils.constants import *
 from itertools import islice
 
 logging.basicConfig(
@@ -13,6 +13,54 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
+
+###
+# Process match event data from bronze to silver layer
+###
+def process_event_data():
+    logging.info("Starting match data processing pipeline.")
+    bronze_events_dir = Path(BRONZE_DIR_EVENTS)
+    silver_events_dir = Path(SILVER_DIR_EVENTS)
+
+    # Clean the silver directory before processing
+    if silver_events_dir.exists():
+        for file in silver_events_dir.glob("*.parquet"):
+            try:
+                file.unlink()
+                logging.info(f"Deleted old file: {file}")
+            except Exception as e:
+                logging.warning(f"Could not delete file {file}: {e}")
+    else:
+        silver_events_dir.mkdir(parents=True, exist_ok=True)
+
+    for parquet_file in bronze_events_dir.glob("*.parquet"):
+        match_id = parquet_file.stem.replace("events_", "")
+        logging.info(f"Processing match {match_id} from {parquet_file}")
+        try:
+            df = pl.read_parquet(parquet_file)
+            logging.info(f"Loaded {len(df)} events for match {match_id}")
+            
+            df = df.with_columns(
+                pl.col("timestamp").str.strptime(pl.Datetime, "%H:%M:%S.%f", strict=False)
+            )
+            logging.info(f"Processed timestamps for match {match_id}")
+            
+            df = flatten_columns(df)
+            logging.info(f"Flattened columns for match {match_id}")
+            
+            df = enrich_locations(df)
+            logging.info(f"Enriched locations for match {match_id}")
+            
+            df = add_possession_stats(df)
+            logging.info(f"Added possession stats for match {match_id}")
+            
+            df.write_parquet(silver_events_dir / f"events_{match_id}.parquet")
+            logging.info(f"Saved enriched events for match {match_id} to {silver_events_dir / f'events_{match_id}.parquet'}")
+        except Exception as e:
+            logging.warning(f"Failed to process match {match_id}: {e}")
+            import traceback
+            logging.warning(f"Traceback: {traceback.format_exc()}")
+    logging.info("Completed match data processing pipeline.")
 
 ### Location Normalization Functions ###
 
@@ -94,48 +142,3 @@ def add_possession_stats(df):
     df = df.join(total_xg, on="possession", how="left")
 
     return df
-
-def process_event_data():
-    logging.info("Starting match data processing pipeline.")
-    bronze_events_dir = Path(BRONZE_DIR_EVENTS)
-    silver_events_dir = Path(SILVER_DIR_EVENTS)
-
-    # Clean the silver directory before processing
-    if silver_events_dir.exists():
-        for file in silver_events_dir.glob("*.parquet"):
-            try:
-                file.unlink()
-                logging.info(f"Deleted old file: {file}")
-            except Exception as e:
-                logging.warning(f"Could not delete file {file}: {e}")
-    else:
-        silver_events_dir.mkdir(parents=True, exist_ok=True)
-
-    for parquet_file in bronze_events_dir.glob("*.parquet"):
-        match_id = parquet_file.stem.replace("events_", "")
-        logging.info(f"Processing match {match_id} from {parquet_file}")
-        try:
-            df = pl.read_parquet(parquet_file)
-            logging.info(f"Loaded {len(df)} events for match {match_id}")
-            
-            df = df.with_columns(
-                pl.col("timestamp").str.strptime(pl.Datetime, "%H:%M:%S.%f", strict=False)
-            )
-            logging.info(f"Processed timestamps for match {match_id}")
-            
-            df = flatten_columns(df)
-            logging.info(f"Flattened columns for match {match_id}")
-            
-            df = enrich_locations(df)
-            logging.info(f"Enriched locations for match {match_id}")
-            
-            df = add_possession_stats(df)
-            logging.info(f"Added possession stats for match {match_id}")
-            
-            df.write_parquet(silver_events_dir / f"events_{match_id}.parquet")
-            logging.info(f"Saved enriched events for match {match_id} to {silver_events_dir / f'events_{match_id}.parquet'}")
-        except Exception as e:
-            logging.warning(f"Failed to process match {match_id}: {e}")
-            import traceback
-            logging.warning(f"Traceback: {traceback.format_exc()}")
-    logging.info("Completed match data processing pipeline.")

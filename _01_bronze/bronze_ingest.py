@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 import polars as pl
-from utils.config import *
+from utils.constants import *
 import json
 
 # Logging setup

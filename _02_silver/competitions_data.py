@@ -2,7 +2,7 @@ import logging
 import polars as pl
 from pyparsing import Path
 
-from utils.config import BRONZE_DIR_COMPETITIONS, SILVER_DIR_COMPETITIONS
+from utils.constants import BRONZE_DIR_COMPETITIONS, SILVER_DIR_COMPETITIONS
 
 
 logging.basicConfig(
@@ -14,8 +14,9 @@ logging.basicConfig(
     ]
 )
 
-
-
+###
+# Process competitions data from bronze to silver layer
+###
 def process_competitions_data():
     """
     Process competitions data to create silver layer.

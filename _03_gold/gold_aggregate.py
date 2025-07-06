@@ -1,5 +1,5 @@
 import logging
-import utils.config as config
+import utils.constants as constants
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,7 +20,7 @@ def aggregate_match_data():
     logging.info("Starting aggregation of match data for gold layer.")
     
     # Read silver layer data
-    silver_events_dir = config.ABS_PATH / config.SILVER_DIR_EVENTS
+    silver_events_dir = constants.ABS_PATH / constants.SILVER_DIR_EVENTS
     if not silver_events_dir.exists():
         logging.error(f"Silver events directory {silver_events_dir} does not exist.")
         return
