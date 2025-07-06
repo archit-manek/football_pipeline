@@ -12,13 +12,6 @@ BRONZE_DIR_LINEUPS = BRONZE_DIR / "lineups"
 BRONZE_DIR_EVENTS = BRONZE_DIR / "events"
 BRONZE_DIR_360_EVENTS = BRONZE_DIR / "360_events"
 
-# Define directories (SILVER)
-SILVER_DIR = Path("data/silver")
-SILVER_DIR_EVENTS = SILVER_DIR / "events"
-
-# Define directories (GOLD)
-GOLD_DIR = Path("data/gold")
-
 # Ensure directories exist (BRONZE)
 BRONZE_DIR.mkdir(parents=True, exist_ok=True)
 BRONZE_DIR_MATCHES.mkdir(parents=True, exist_ok=True)
@@ -27,9 +20,18 @@ BRONZE_DIR_LINEUPS.mkdir(parents=True, exist_ok=True)
 BRONZE_DIR_EVENTS.mkdir(parents=True, exist_ok=True)
 BRONZE_DIR_360_EVENTS.mkdir(parents=True, exist_ok=True)
 
+# Define directories (SILVER)
+SILVER_DIR = Path("data/silver")
+SILVER_DIR_EVENTS = SILVER_DIR / "events"
+SILVER_DIR_COMPETITIONS = SILVER_DIR / "competitions"
+
 # Ensure directories exist (SILVER)
 SILVER_DIR.mkdir(parents=True, exist_ok=True)
 SILVER_DIR_EVENTS.mkdir(parents=True, exist_ok=True)
+SILVER_DIR_COMPETITIONS.mkdir(parents=True, exist_ok=True)
+
+# Define directories (GOLD)
+GOLD_DIR = Path("data/gold")
 
 # Ensure directories exist (GOLD)
 GOLD_DIR.mkdir(parents=True, exist_ok=True)

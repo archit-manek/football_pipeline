@@ -9,7 +9,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.FileHandler("logs/silver/pipeline.log", mode="w"),
+        logging.FileHandler("logs/silver/event_data.log", mode="w"),
         logging.StreamHandler()
     ]
 )
@@ -95,7 +95,7 @@ def add_possession_stats(df):
 
     return df
 
-def process_match_data():
+def process_event_data():
     logging.info("Starting match data processing pipeline.")
     bronze_events_dir = Path(BRONZE_DIR_EVENTS)
     silver_events_dir = Path(SILVER_DIR_EVENTS)
