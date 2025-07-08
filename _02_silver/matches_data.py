@@ -2,18 +2,13 @@ import logging
 from pathlib import Path
 import polars as pl
 
-from utils.constants import BRONZE_DIR_MATCHES, SILVER_DIR_MATCHES
+from utils.constants import BRONZE_DIR_MATCHES, SILVER_DIR_MATCHES, SILVER_LOGS_MATCHES_PATH
 from utils.dataframe import flatten_columns
+from utils.logging import setup_logging
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("logs/silver/matches_data.log", mode="w"),
-        logging.StreamHandler()
-    ]
-)
+log_path = Path(SILVER_LOGS_MATCHES_PATH)
+setup_logging(log_path)
 
 def process_matches_data():
     logging.info("Processing matches data...")

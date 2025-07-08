@@ -184,3 +184,4 @@ docs/
 *.csv
 *.json
 .DS_Store
+*.zip

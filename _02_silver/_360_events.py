@@ -1,18 +1,13 @@
 import logging
 from pathlib import Path
 import polars as pl
-from utils.constants import BRONZE_DIR_360_EVENTS, SILVER_DIR_360_EVENTS
+from utils.constants import BRONZE_DIR_360_EVENTS, SILVER_DIR_360_EVENTS, SILVER_LOGS_360_EVENTS_PATH
 from utils.dataframe import flatten_columns
+from utils.logging import setup_logging
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("logs/silver/360_events.log", mode="w"),
-        logging.StreamHandler()
-    ]
-)
+log_path = Path(SILVER_LOGS_360_EVENTS_PATH)
+setup_logging(log_path)
 
 def process_360_events_data():
     logging.info("Processing 360 events data...")

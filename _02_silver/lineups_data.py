@@ -1,18 +1,13 @@
 import logging
 from pathlib import Path
 import polars as pl
-from utils.constants import BRONZE_DIR_LINEUPS, SILVER_DIR_LINEUPS
+from utils.constants import BRONZE_DIR_LINEUPS, SILVER_DIR_LINEUPS, SILVER_LOGS_LINEUPS_PATH
 from utils.dataframe import flatten_columns
+from utils.logging import setup_logging
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("logs/silver/lineups_data.log", mode="w"),
-        logging.StreamHandler()
-    ]
-)
+log_path = Path(SILVER_LOGS_LINEUPS_PATH)
+setup_logging(log_path)
 
 ###
 # Process lineups data from the bronze layer to the silver layer.

@@ -4,6 +4,14 @@ from pathlib import Path
 # Absolute path to the project root
 ABS_PATH = Path("/Users/architmanek/Desktop/DataEngineering/football_pipeline")
 
+# Silver logs paths
+SILVER_LOGS_PATH = Path("logs/silver")
+SILVER_LOGS_MATCHES_PATH = SILVER_LOGS_PATH / "matches"
+SILVER_LOGS_COMPETITIONS_PATH = SILVER_LOGS_PATH / "competitions"
+SILVER_LOGS_LINEUPS_PATH = SILVER_LOGS_PATH / "lineups"
+SILVER_LOGS_EVENTS_PATH = SILVER_LOGS_PATH / "events"
+SILVER_LOGS_360_EVENTS_PATH = SILVER_LOGS_PATH / "360_events"
+
 # Define directories (BRONZE)
 BRONZE_DIR = Path("data/bronze")
 BRONZE_DIR_MATCHES = BRONZE_DIR / "matches"

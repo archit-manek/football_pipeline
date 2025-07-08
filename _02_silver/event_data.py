@@ -6,14 +6,10 @@ from utils.constants import *
 from utils.dataframe import flatten_columns
 from itertools import islice
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("logs/silver/event_data.log", mode="w"),
-        logging.StreamHandler()
-    ]
-)
+from utils.logging import setup_logging
+
+log_path = Path(SILVER_LOGS_EVENTS_PATH)
+setup_logging(log_path)
 
 ###
 # Process match event data from bronze to silver layer

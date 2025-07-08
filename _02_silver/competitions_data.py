@@ -2,17 +2,12 @@ import logging
 import polars as pl
 from pyparsing import Path
 
-from utils.constants import BRONZE_DIR_COMPETITIONS, SILVER_DIR_COMPETITIONS
+from utils.constants import BRONZE_DIR_COMPETITIONS, SILVER_DIR_COMPETITIONS, SILVER_LOGS_COMPETITIONS_PATH
+from utils.logging import setup_logging
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("logs/silver/competitions_data.log", mode="w"),
-        logging.StreamHandler()
-    ]
-)
+log_path = Path(SILVER_LOGS_COMPETITIONS_PATH)
+setup_logging(log_path)
 
 ###
 # Process competitions data from bronze to silver layer
