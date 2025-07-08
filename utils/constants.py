@@ -6,11 +6,12 @@ ABS_PATH = Path("/Users/architmanek/Desktop/DataEngineering/football_pipeline")
 
 # Silver logs paths
 SILVER_LOGS_PATH = Path("logs/silver")
-SILVER_LOGS_MATCHES_PATH = SILVER_LOGS_PATH / "matches"
-SILVER_LOGS_COMPETITIONS_PATH = SILVER_LOGS_PATH / "competitions"
-SILVER_LOGS_LINEUPS_PATH = SILVER_LOGS_PATH / "lineups"
-SILVER_LOGS_EVENTS_PATH = SILVER_LOGS_PATH / "events"
-SILVER_LOGS_360_EVENTS_PATH = SILVER_LOGS_PATH / "360_events"
+SILVER_LOGS_PATH.mkdir(parents=True, exist_ok=True)
+SILVER_LOGS_MATCHES_PATH = SILVER_LOGS_PATH / "matches.log"
+SILVER_LOGS_COMPETITIONS_PATH = SILVER_LOGS_PATH / "competitions.log"
+SILVER_LOGS_LINEUPS_PATH = SILVER_LOGS_PATH / "lineups.log"
+SILVER_LOGS_EVENTS_PATH = SILVER_LOGS_PATH / "events.log"
+SILVER_LOGS_360_EVENTS_PATH = SILVER_LOGS_PATH / "360_events.log" #logs/silver/360_events.log
 
 # Define directories (BRONZE)
 BRONZE_DIR = Path("data/bronze")
