@@ -3,6 +3,7 @@ import logging
 import numpy as np
 from pathlib import Path
 from utils.constants import *
+from utils.dataframe import flatten_columns
 from itertools import islice
 
 logging.basicConfig(
@@ -82,11 +83,6 @@ def enrich_locations(df):
           .alias("end_y"),
     ])
     return df
-
-### Column Flattening Functions ###
-
-def flatten_columns(df):
-    return df.rename({col: col.replace('.', '_') for col in df.columns})
 
 ### Possession Stats Functions ###
 
