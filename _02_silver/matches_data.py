@@ -10,7 +10,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.FileHandler("logs/silver/lineups_data.log", mode="w"),
+        logging.FileHandler("logs/silver/matches_data.log", mode="w"),
         logging.StreamHandler()
     ]
 )
