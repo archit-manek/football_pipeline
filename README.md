@@ -11,15 +11,15 @@ Built using Medallion architecture and modern Python tooling, this project is de
 The pipeline uses a three layer Medallion structure:
 
 * **Bronze** – Raw StatsBomb JSON files
-* **Silver** – Cleaned and normalized tables (e.g., shots, passes)
+* **Silver** – Cleaned nested columns and derived new columns
 * **Gold** – Feature-engineered tables for modeling (e.g., shot angle, distance, goal label)
 
 ---
 
 ### Technologies Used
 
-* `pandas` for transformation
-* `parquet` for silver/gold storage
+* `polars` for transformation
+* `parquet` for storage
 * StatsBomb Open Data for event-level input
 
 ---
@@ -29,6 +29,6 @@ The pipeline uses a three layer Medallion structure:
 ```
 data/
 ├── bronze/    # Raw match/event JSONs (from StatsBomb)
-├── silver/    # Normalized data tables (e.g., matches.parquet)
-└── gold/      # Engineered features ready for ML
+├── silver/    # Cleaned data tables
+└── gold/      # Engineered features
 ```

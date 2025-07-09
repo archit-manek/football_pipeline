@@ -1,11 +1,11 @@
 import polars as pl
 import logging
 import numpy as np
+import pandera as pa
 from pathlib import Path
 from utils.constants import *
-from utils.dataframe import flatten_columns
-from itertools import islice
-
+from utils.dataframe import flatten_columns, add_missing_columns, cast_columns_to_schema_types, log_schema_differences, validate_polars_with_pandera, get_int_columns_from_schema, fix_int_columns_with_nans
+from schemas.events_schema import events_schema
 from utils.logging import setup_logger
 
 log_path = Path(SILVER_LOGS_EVENTS_PATH)
@@ -14,7 +14,7 @@ logger = setup_logger(log_path, "events")
 ###
 # Process match event data from bronze to silver layer
 ###
-def process_event_data():
+def process_events_data():
     logger.info("Starting match data processing pipeline.")
     bronze_events_dir = Path(BRONZE_DIR_EVENTS)
     silver_events_dir = Path(SILVER_DIR_EVENTS)
@@ -37,19 +37,41 @@ def process_event_data():
             df = pl.read_parquet(parquet_file)
             logger.info(f"Loaded {len(df)} events for match {match_id}")
             
-            df = df.with_columns(
-                pl.col("timestamp").str.strptime(pl.Datetime, "%H:%M:%S.%f", strict=False)
-            )
-            logger.info(f"Processed timestamps for match {match_id}")
-            
+            # Flatten columns
             df = flatten_columns(df)
             logger.info(f"Flattened columns for match {match_id}")
             
+            # Add missing columns
+            expected_cols = set(events_schema.columns.keys())
+            df = add_missing_columns(df, expected_cols)
+            logger.info(f"Added missing columns for match {match_id}")
+            
+            # Fix integer columns to preserve Int64 type (prevent Float64 conversion)
+            int_cols = get_int_columns_from_schema(events_schema)
+            df = fix_int_columns_with_nans(df, int_cols)
+            logger.info(f"Fixed {len(int_cols)} integer columns to preserve Int64 type for match {match_id}")
+            
+            # Cast columns to schema types
+            df = cast_columns_to_schema_types(df, events_schema)
+            logger.info(f"Cast columns to schema types for match {match_id}")
+            
+            # Process timestamps
+            df = df.with_columns(
+                pl.col("timestamp").str.strptime(pl.Datetime, "%H:%M:%S%.f", strict=False)
+            )
+            logger.info(f"Processed timestamps for match {match_id}")
+            
+            # Enrich locations
             df = enrich_locations(df)
             logger.info(f"Enriched locations for match {match_id}")
             
+            # Add possession stats
             df = add_possession_stats(df)
             logger.info(f"Added possession stats for match {match_id}")
+            
+            # Validate schema
+            log_schema_differences(df, events_schema, logger, parquet_file)
+            logger.info(f"Schema validation skipped for match {match_id} (validation disabled)")
             
             df.write_parquet(silver_events_dir / f"events_{match_id}.parquet")
             logger.info(f"Saved enriched events for match {match_id} to {silver_events_dir / f'events_{match_id}.parquet'}")
@@ -127,10 +149,16 @@ def add_possession_stats(df):
     )
 
     # Merge it back into the main DataFrame as a new column
-    df = df.join(event_count, on="possession", how="left")
-    df = df.join(pass_count, on="possession", how="left")
-    df = df.join(player_count, on="possession", how="left")
-    df = df.join(duration, on="possession", how="left")
-    df = df.join(total_xg, on="possession", how="left")
+    # Check if columns already exist to avoid duplicates
+    if "possession_event_count" not in df.columns:
+        df = df.join(event_count, on="possession", how="left")
+    if "possession_pass_count" not in df.columns:
+        df = df.join(pass_count, on="possession", how="left")
+    if "possession_player_count" not in df.columns:
+        df = df.join(player_count, on="possession", how="left")
+    if "possession_duration" not in df.columns:
+        df = df.join(duration, on="possession", how="left")
+    if "total_xG" not in df.columns:
+        df = df.join(total_xg, on="possession", how="left")
 
     return df
