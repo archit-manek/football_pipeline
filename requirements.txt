@@ -8,3 +8,8 @@ tqdm
 requests
 rich
 pandera
+scikit-learn
+numpy
+matplotlib
+seaborn
+joblib
