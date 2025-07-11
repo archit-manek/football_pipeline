@@ -60,7 +60,7 @@ class XGModel:
                 
             try:
                 df = pl.read_parquet(parquet_file)
-                shots = df.filter(pl.col("type_name") == "Shot")
+                shots = df.filter((pl.col("type_name") == "Shot") & (pl.col("shot_type_name") != "Penalty"))
                 
                 if len(shots) > 0:
                     shot_data.append(shots)
@@ -112,13 +112,16 @@ class XGModel:
             .alias("distance_to_goal")
         )
         
-        # Angle to goal (more complex calculation)
+        # Angle to goal
         # Convert normalized coordinates to raw coordinates for angle calculation
         shots = shots.with_columns(
             pl.when(pl.col("x").is_not_null() & pl.col("y").is_not_null())
             .then(
+                # Calculate the visual angle between the shot and the goal
                 pl.arctan2(
-                    pl.lit(7.32),  # Goal width in StatsBomb units
+                    # Goal width in StatsBomb units (7.32m)
+                    pl.lit(7.32),
+                    # Calculate distance to BOTH goal posts (3.66m from center)
                     pl.max_horizontal([
                         ((120 - pl.col("x") * 120) ** 2 + (40 - 3.66 - pl.col("y") * 80) ** 2) ** 0.5,
                         ((120 - pl.col("x") * 120) ** 2 + (40 + 3.66 - pl.col("y") * 80) ** 2) ** 0.5

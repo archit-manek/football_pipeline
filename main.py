@@ -16,15 +16,12 @@ if __name__ == "__main__":
     # bronze_ingest()
 
     # SILVER STAGE
-    process_events_data()
-    process_competitions_data()
-    process_lineups_data()
-    process_matches_data()
-    process_360_events_data()
+    # process_events_data()
+    # process_competitions_data()
+    # process_lineups_data()
+    # process_matches_data()
+    # process_360_events_data()
 
     # GOLD STAGE
-    # aggregate_match_data()
-    
     # Build xG model
-    
-    # build_xg_model()  # Uncomment to build full model
+    build_xg_model()
