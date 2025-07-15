@@ -23,12 +23,17 @@ logger.setLevel(logging.INFO)
 Path("logs/bronze").mkdir(parents=True, exist_ok=True)
 
 def is_source_newer(source_path: Path, output_path: Path) -> bool:
-    """Check if source file is newer than output file."""
+    """
+    Check if source file is newer than output file.
+    """
     if not output_path.exists():
         return True
     return source_path.stat().st_mtime > output_path.stat().st_mtime
 
 def ingest_competitions_local():
+    """
+    Ingest competitions from the raw data directory into the bronze layer.
+    """
     competitions_path = Path("data/raw/competitions.json")
     output_path = BRONZE_DIR_COMPETITIONS / "competitions.parquet"
     
@@ -51,6 +56,9 @@ def ingest_competitions_local():
         logger.warning("No competitions.json found in data/raw/.")
 
 def ingest_matches_local():
+    """
+    Ingest matches from the raw data directory into the bronze layer.
+    """
     matches_dir = Path("data/raw/matches")
     json_files = list(matches_dir.glob("*/*.json"))
     logger.info(f"Found {len(json_files)} match files to process")
@@ -84,6 +92,9 @@ def ingest_matches_local():
     logger.info(f"Matches processing complete: {processed_count} processed, {skipped_count} skipped")
 
 def ingest_lineups_local():
+    """
+    Ingest lineups from the raw data directory into the bronze layer.
+    """
     lineups_dir = Path("data/raw/lineups")
     bronze_lineups_dir = BRONZE_DIR_LINEUPS
     bronze_lineups_dir.mkdir(parents=True, exist_ok=True)
@@ -127,6 +138,9 @@ def ingest_lineups_local():
     logger.info(f"Lineups processing complete: {processed_count} processed, {skipped_count} skipped")
 
 def ingest_events_local():
+    """
+    Ingest events from the raw data directory into the bronze layer.
+    """
     events_dir = Path("data/raw/events")
     bronze_events_dir = BRONZE_DIR_EVENTS
     bronze_events_dir.mkdir(parents=True, exist_ok=True)
@@ -167,6 +181,9 @@ def ingest_events_local():
     logger.info(f"Events processing complete: {processed_count} processed, {skipped_count} skipped")
 
 def ingest_360_events_local():
+    """
+    Ingest 360 events from the raw data directory into the bronze layer.
+    """
     raw_360_dir = Path("data/raw/three-sixty")
     bronze_360_dir = BRONZE_DIR_360_EVENTS / "events_360"
     bronze_360_dir.mkdir(parents=True, exist_ok=True)
@@ -209,44 +226,13 @@ def ingest_360_events_local():
     logger.info(f"360 events processing complete: {processed_count} processed, {skipped_count} skipped, {error_count} errors")
 
 def bronze_ingest():
-    start_time = time.time()
+    """
+    Ingest all bronze layer data from the raw data directory.
+    """
     logger.info("Starting bronze layer ingestion...")
     
-    # Time each step
-    step_start = time.time()
     ingest_competitions_local()
-    competitions_time = time.time() - step_start
-    logger.info(f"Competitions processing completed in {competitions_time:.2f} seconds")
-    
-    step_start = time.time()
     ingest_matches_local()
-    matches_time = time.time() - step_start
-    logger.info(f"Matches processing completed in {matches_time:.2f} seconds")
-    
-    step_start = time.time()
     ingest_lineups_local()
-    lineups_time = time.time() - step_start
-    logger.info(f"Lineups processing completed in {lineups_time:.2f} seconds")
-    
-    step_start = time.time()
     ingest_events_local()
-    events_time = time.time() - step_start
-    logger.info(f"Events processing completed in {events_time:.2f} seconds")
-    
-    step_start = time.time()
     ingest_360_events_local()
-    events_360_time = time.time() - step_start
-    logger.info(f"360 events processing completed in {events_360_time:.2f} seconds")
-    
-    total_time = time.time() - start_time
-    logger.info(f"Bronze layer ingestion completed in {total_time:.2f} seconds total!")
-    
-    # Log detailed timing breakdown
-    logger.info("=== PERFORMANCE BREAKDOWN ===")
-    logger.info(f"Competitions: {competitions_time:.2f}s")
-    logger.info(f"Matches: {matches_time:.2f}s")
-    logger.info(f"Lineups: {lineups_time:.2f}s")
-    logger.info(f"Events: {events_time:.2f}s")
-    logger.info(f"360 Events: {events_360_time:.2f}s")
-    logger.info(f"Total: {total_time:.2f}s")
-    logger.info("=============================")
