@@ -13,14 +13,14 @@ os.makedirs("logs/silver", exist_ok=True)
 
 if __name__ == "__main__":
     # BRONZE STAGE
-    bronze_ingest()
+    # bronze_ingest()
 
     # SILVER STAGE
     # process_events_data()
     # process_competitions_data()
     # process_lineups_data()
     # process_matches_data()
-    # process_360_events_data()
+    process_360_events_data()
 
     # GOLD STAGE
     # Build xG model

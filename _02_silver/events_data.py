@@ -1,85 +1,105 @@
 import polars as pl
-import logging
 import numpy as np
 import pandera as pa
 from pathlib import Path
 from utils.constants import *
-from utils.dataframe import flatten_columns, add_missing_columns, cast_columns_to_schema_types, log_schema_differences, validate_polars_with_pandera, get_int_columns_from_schema, fix_int_columns_with_nans
+from utils.dataframe import flatten_columns, add_missing_columns, cast_columns_to_schema_types, log_schema_differences, validate_polars_with_pandera, get_int_columns_from_schema, fix_int_columns_with_nans, is_source_newer
 from schemas.events_schema import events_schema
 from utils.logging import setup_logger
 
 log_path = Path(SILVER_LOGS_EVENTS_PATH)
 logger = setup_logger(log_path, "events")
 
+
+
 ###
 # Process match event data from bronze to silver layer
 ###
 def process_events_data():
-    logger.info("Starting match data processing pipeline.")
+    logger.info("Starting silver events processing pipeline...")
+    
     bronze_events_dir = Path(BRONZE_DIR_EVENTS)
     silver_events_dir = Path(SILVER_DIR_EVENTS)
 
-    # Clean the silver directory before processing
-    if silver_events_dir.exists():
-        for file in silver_events_dir.glob("*.parquet"):
-            try:
-                file.unlink()
-                logger.info(f"Deleted old file: {file}")
-            except Exception as e:
-                logger.warning(f"Could not delete file {file}: {e}")
-    else:
-        silver_events_dir.mkdir(parents=True, exist_ok=True)
+    # Ensure silver directory exists
+    silver_events_dir.mkdir(parents=True, exist_ok=True)
 
-    for parquet_file in bronze_events_dir.glob("*.parquet"):
+    # Get all bronze files
+    bronze_files = list(bronze_events_dir.glob("*.parquet"))
+    logger.info(f"Found {len(bronze_files)} bronze event files to process")
+    
+    processed_count = 0
+    skipped_count = 0
+    error_count = 0
+    total_events = 0
+
+    # Configure Polars for better performance
+    pl.Config.set_tbl_rows(0)
+    pl.Config.set_tbl_cols(0)
+
+    for parquet_file in bronze_files:
         match_id = parquet_file.stem.replace("events_", "")
-        logger.info(f"Processing match {match_id} from {parquet_file}")
+        silver_path = silver_events_dir / f"events_{match_id}.parquet"
+        
+        # Check if source is newer than output
+        if silver_path.exists() and not is_source_newer(parquet_file, silver_path):
+            skipped_count += 1
+            continue
+            
         try:
             df = pl.read_parquet(parquet_file)
-            logger.info(f"Loaded {len(df)} events for match {match_id}")
+            events_count = len(df)
+            total_events += events_count
             
             # Flatten columns
             df = flatten_columns(df)
-            logger.info(f"Flattened columns for match {match_id}")
             
             # Add missing columns
             expected_cols = set(events_schema.columns.keys())
             df = add_missing_columns(df, expected_cols)
-            logger.info(f"Added missing columns for match {match_id}")
             
             # Fix integer columns to preserve Int64 type (prevent Float64 conversion)
             int_cols = get_int_columns_from_schema(events_schema)
             df = fix_int_columns_with_nans(df, int_cols)
-            logger.info(f"Fixed {len(int_cols)} integer columns to preserve Int64 type for match {match_id}")
             
             # Cast columns to schema types
             df = cast_columns_to_schema_types(df, events_schema)
-            logger.info(f"Cast columns to schema types for match {match_id}")
             
             # Process timestamps
             df = df.with_columns(
                 pl.col("timestamp").str.strptime(pl.Datetime, "%H:%M:%S%.f", strict=False)
             )
-            logger.info(f"Processed timestamps for match {match_id}")
             
             # Enrich locations
             df = enrich_locations(df)
-            logger.info(f"Enriched locations for match {match_id}")
             
             # Add possession stats
             df = add_possession_stats(df)
-            logger.info(f"Added possession stats for match {match_id}")
             
             # Validate schema
             log_schema_differences(df, events_schema, logger, parquet_file)
-            logger.info(f"Schema validation skipped for match {match_id} (validation disabled)")
             
-            df.write_parquet(silver_events_dir / f"events_{match_id}.parquet")
-            logger.info(f"Saved enriched events for match {match_id} to {silver_events_dir / f'events_{match_id}.parquet'}")
+            df.write_parquet(silver_path, compression="snappy")
+            processed_count += 1
+            
+            # Log progress every 100 files to reduce I/O overhead
+            if processed_count % 100 == 0:
+                logger.info(f"Processed {processed_count} event files...")
+                
         except Exception as e:
             logger.warning(f"Failed to process match {match_id}: {e}")
-            import traceback
-            logger.warning(f"Traceback: {traceback.format_exc()}")
-    logger.info("Completed match data processing pipeline.")
+            error_count += 1
+            continue
+
+    # Summary
+    logger.info("=== SILVER EVENTS PROCESSING SUMMARY ===")
+    logger.info(f"Files processed: {processed_count}")
+    logger.info(f"Files skipped: {skipped_count}")
+    logger.info(f"Files with errors: {error_count}")
+    logger.info(f"Total events processed: {total_events:,}")
+    if processed_count > 0:
+        logger.info(f"Average events per file: {total_events // processed_count:,}")
+    logger.info("==========================================")
 
 ### Location Normalization Functions ###
 
@@ -102,63 +122,12 @@ def enrich_locations(df):
     ])
     return df
 
-### Possession Stats Functions ###
-
 def add_possession_stats(df):
-    """Add possession stats
-
-    Args:
-        df (pd.DataFrame): DataFrame with pass data
-
-    Returns:
-        pd.DataFrame: DataFrame with possession stats including:
-        - possession_event_count: Number of events in each possession
-        - possession_pass_count: Number of passes in each possession
-        - possession_player_count: Number of unique players in each possession
-        - possession_duration: Duration of each possession
-        - possession_xg: Total xG in the possession
-    """
-    
-    # Calculate event count per possession
-    event_count = df.group_by("possession").agg(
-        pl.count().alias("possession_event_count")
-    )
-
-    # Number of passes in each possession
-    pass_count = (
-        df.filter(pl.col("type_name") == "Pass")
-        .group_by("possession")
-        .agg(pl.count().alias("possession_pass_count"))
-    )
-
-    # Number of unique players in each possession
-    player_count = df.group_by("possession").agg(
-        pl.col("player_id").n_unique().alias("possession_player_count")
-    )
-    
-    # Possession duration (in seconds)
-    duration = df.group_by("possession").agg(
-        (pl.col("timestamp").max() - pl.col("timestamp").min()).dt.total_seconds().alias("possession_duration")
-    )
-
-    # Total xG per possession
-    total_xg = (
-        df.filter(pl.col("type_name") == "Shot")
-        .group_by("possession")
-        .agg(pl.col("shot_statsbomb_xg").sum().alias("total_xG"))
-    )
-
-    # Merge it back into the main DataFrame as a new column
-    # Check if columns already exist to avoid duplicates
-    if "possession_event_count" not in df.columns:
-        df = df.join(event_count, on="possession", how="left")
-    if "possession_pass_count" not in df.columns:
-        df = df.join(pass_count, on="possession", how="left")
-    if "possession_player_count" not in df.columns:
-        df = df.join(player_count, on="possession", how="left")
-    if "possession_duration" not in df.columns:
-        df = df.join(duration, on="possession", how="left")
-    if "total_xG" not in df.columns:
-        df = df.join(total_xg, on="possession", how="left")
-
+    """Add possession-level statistics to events"""
+    df = df.with_columns([
+        pl.col("possession").count().over("possession").alias("possession_event_count"),
+        pl.col("possession").filter(pl.col("type_name") == "Pass").count().over("possession").alias("possession_pass_count"),
+        pl.col("player_id").n_unique().over("possession").alias("possession_player_count"),
+        pl.col("duration").sum().over("possession").alias("possession_duration"),
+    ])
     return df

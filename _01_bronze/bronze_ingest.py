@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 import polars as pl
 from utils.constants import *
+from utils.dataframe import is_source_newer
 import json
 import time
 
@@ -22,13 +23,7 @@ logger.setLevel(logging.INFO)
 # Ensure the log directory exists
 Path("logs/bronze").mkdir(parents=True, exist_ok=True)
 
-def is_source_newer(source_path: Path, output_path: Path) -> bool:
-    """
-    Check if source file is newer than output file.
-    """
-    if not output_path.exists():
-        return True
-    return source_path.stat().st_mtime > output_path.stat().st_mtime
+
 
 def ingest_competitions_local():
     """
@@ -185,7 +180,7 @@ def ingest_360_events_local():
     Ingest 360 events from the raw data directory into the bronze layer.
     """
     raw_360_dir = Path("data/raw/three-sixty")
-    bronze_360_dir = BRONZE_DIR_360_EVENTS / "events_360"
+    bronze_360_dir = BRONZE_DIR_360_EVENTS
     bronze_360_dir.mkdir(parents=True, exist_ok=True)
     
     json_files = list(raw_360_dir.glob("*.json"))

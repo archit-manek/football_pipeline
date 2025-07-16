@@ -161,4 +161,14 @@ events_schema = DataFrameSchema({
     
     "off_camera": Column(pa.Bool, nullable=True),
     "out": Column(pa.Bool, nullable=True),
+    
+    # NEW: Adding missing columns from schema validation warnings
+    "goalkeeper_shot_saved_off_target": Column(pa.Bool, nullable=True),
+    "shot_saved_off_target": Column(pa.Bool, nullable=True),
+    "goalkeeper_shot_saved_to_post": Column(pa.Bool, nullable=True),
+    "shot_saved_to_post": Column(pa.Bool, nullable=True),
+    "goalkeeper_success_in_play": Column(pa.Bool, nullable=True),
+    "half_start_late_video_start": Column(pa.Bool, nullable=True),
+    "foul_committed_penalty": Column(pa.Bool, nullable=True),
+    "foul_won_penalty": Column(pa.Bool, nullable=True),
 })
