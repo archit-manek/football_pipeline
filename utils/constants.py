@@ -1,68 +1,111 @@
-# filepath: utils/config.py
+# filepath: utils/constants.py
 from pathlib import Path
 
-# Absolute path to the project root
-ABS_PATH = Path("/Users/architmanek/Desktop/DataEngineering/football_pipeline")
+# Get the project root dynamically
+PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 
-# Define directories (RAW)
-RAW_DIR = Path("data/raw")
-RAW_DIR_MATCHES = RAW_DIR / "matches"
-RAW_DIR_COMPETITIONS = RAW_DIR / "competitions"
-RAW_DIR_LINEUPS = RAW_DIR / "lineups"
-RAW_DIR_EVENTS = RAW_DIR / "events"
-RAW_DIR_360_EVENTS = RAW_DIR / "three-sixty"
+# Define base directories
+DATA_DIR = PROJECT_ROOT / "data"
+LOGS_DIR = PROJECT_ROOT / "logs"
+LANDING_DIR = DATA_DIR / "landing"
+BRONZE_DIR = DATA_DIR / "bronze"
+SILVER_DIR = DATA_DIR / "silver"
+GOLD_DIR = DATA_DIR / "gold"
 
-# Ensure directories exist (RAW)
-RAW_DIR.mkdir(parents=True, exist_ok=True)
-RAW_DIR_MATCHES.mkdir(parents=True, exist_ok=True)
-RAW_DIR_COMPETITIONS.mkdir(parents=True, exist_ok=True)
-RAW_DIR_LINEUPS.mkdir(parents=True, exist_ok=True)
-RAW_DIR_EVENTS.mkdir(parents=True, exist_ok=True)
-RAW_DIR_360_EVENTS.mkdir(parents=True, exist_ok=True)
+# Supported data sources
+SUPPORTED_SOURCES = ["open-data", "j1-league"]
 
-# Define directories (BRONZE)
-BRONZE_DIR = Path("data/bronze")
-BRONZE_DIR_MATCHES = BRONZE_DIR / "matches"
-BRONZE_DIR_COMPETITIONS = BRONZE_DIR / "competitions"
-BRONZE_DIR_LINEUPS = BRONZE_DIR / "lineups"
-BRONZE_DIR_EVENTS = BRONZE_DIR / "events"
-BRONZE_DIR_360_EVENTS = BRONZE_DIR / "360_events" / "events_360"
+def get_open_data_dirs():
+    """
+    Returns directory paths for open-data source (StatsBomb structure).
+    """
+    source_name = "open-data"
 
-# Ensure directories exist (BRONZE)
-BRONZE_DIR.mkdir(parents=True, exist_ok=True)
-BRONZE_DIR_MATCHES.mkdir(parents=True, exist_ok=True)
-BRONZE_DIR_COMPETITIONS.mkdir(parents=True, exist_ok=True)
-BRONZE_DIR_LINEUPS.mkdir(parents=True, exist_ok=True)
-BRONZE_DIR_EVENTS.mkdir(parents=True, exist_ok=True)
-BRONZE_DIR_360_EVENTS.mkdir(parents=True, exist_ok=True)
+    output_dirs = {
+        # Landing data directories
+        "landing": LANDING_DIR / source_name,
+        "landing_matches": LANDING_DIR / source_name / "matches",
+        "landing_competitions": LANDING_DIR / source_name / "competitions",
+        "landing_lineups": LANDING_DIR / source_name / "lineups",
+        "landing_events": LANDING_DIR / source_name / "events",
+        "landing_360_events": LANDING_DIR / source_name / "three-sixty",
+        
+        # Bronze layer directories
+        "bronze": BRONZE_DIR / source_name,
+        "bronze_matches": BRONZE_DIR / source_name / "matches",
+        "bronze_competitions": BRONZE_DIR / source_name / "competitions",
+        "bronze_lineups": BRONZE_DIR / source_name / "lineups",
+        "bronze_events": BRONZE_DIR / source_name / "events",
+        "bronze_360_events": BRONZE_DIR / source_name / "360_events",
+        
+        # Silver layer directories
+        "silver": SILVER_DIR / source_name,
+        "silver_matches": SILVER_DIR / source_name / "matches",
+        "silver_competitions": SILVER_DIR / source_name / "competitions",
+        "silver_lineups": SILVER_DIR / source_name / "lineups",
+        "silver_events": SILVER_DIR / source_name / "events",
+        "silver_360_events": SILVER_DIR / source_name / "360_events",
+        
+        # Gold layer directories
+        "gold": GOLD_DIR / source_name,
+        
+        # Log directories
+        "logs": LOGS_DIR / source_name,
+        "logs_bronze": LOGS_DIR / source_name / "bronze",
+        "logs_silver": LOGS_DIR / source_name / "silver",
+        "logs_gold": LOGS_DIR / source_name / "gold"
+    }
+    return output_dirs
 
-# Silver logs paths
-SILVER_LOGS_PATH = Path("logs/silver")
-SILVER_LOGS_PATH.mkdir(parents=True, exist_ok=True)
-SILVER_LOGS_MATCHES_PATH = SILVER_LOGS_PATH / "matches.log"
-SILVER_LOGS_COMPETITIONS_PATH = SILVER_LOGS_PATH / "competitions.log"
-SILVER_LOGS_LINEUPS_PATH = SILVER_LOGS_PATH / "lineups.log"
-SILVER_LOGS_EVENTS_PATH = SILVER_LOGS_PATH / "events.log"
-SILVER_LOGS_360_EVENTS_PATH = SILVER_LOGS_PATH / "360_events.log" #logs/silver/360_events.log
+def get_j1_league_dirs():
+    """
+    Returns directory paths for j1-league source (different structure).
+    """
+    source_name = "j1-league"
+    return {
+        # Landing data directories (J1 League specific structure)
+        "landing": LANDING_DIR / source_name,
+        "landing_sb_matches": LANDING_DIR / source_name / "sb-matches",
+        "landing_sb_events": LANDING_DIR / source_name / "sb-events",
+        "landing_hudl_physical": LANDING_DIR / source_name / "hudl-physical",
+        "landing_mappings": LANDING_DIR / source_name,
+        
+        # Bronze layer directories
+        "bronze": BRONZE_DIR / source_name,
+        "bronze_matches": BRONZE_DIR / source_name / "matches",
+        "bronze_events": BRONZE_DIR / source_name / "events",
+        "bronze_physical": BRONZE_DIR / source_name / "physical",
+        "bronze_mappings": BRONZE_DIR / source_name / "mappings",
+        
+        # Silver layer directories (standardized structure)
+        "silver": SILVER_DIR / source_name,
+        "silver_matches": SILVER_DIR / source_name / "matches",
+        "silver_competitions": SILVER_DIR / source_name / "competitions",
+        "silver_lineups": SILVER_DIR / source_name / "lineups",
+        "silver_events": SILVER_DIR / source_name / "events",
+        "silver_360_events": SILVER_DIR / source_name / "360_events",
+        
+        # Gold layer directories
+        "gold": GOLD_DIR / source_name,
+        
+        # Log directories
+        "logs": LOGS_DIR / source_name,
+        "logs_bronze": LOGS_DIR / source_name,
+        "logs_silver": LOGS_DIR / source_name,
+        "logs_gold": LOGS_DIR / source_name
+    }
 
-# Define directories (SILVER)
-SILVER_DIR = Path("data/silver")
-SILVER_DIR_EVENTS = SILVER_DIR / "events"
-SILVER_DIR_COMPETITIONS = SILVER_DIR / "competitions"
-SILVER_DIR_LINEUPS = SILVER_DIR / "lineups"
-SILVER_DIR_MATCHES = SILVER_DIR / "matches"
-SILVER_DIR_360_EVENTS = SILVER_DIR / "360_events" / "events_360"
+def ensure_directories_exist(source_name: str | None = None):
+    """
+    Ensures all necessary directories for a given source exist.
+    If source_id is None, creates general directories.
+    """
+    if source_name == "open-data":
+        dirs = get_open_data_dirs() 
+    elif source_name == "j1-league":
+        dirs = get_j1_league_dirs()
+    else:
+        raise ValueError(f"Invalid source_name: {source_name}. Supported: {SUPPORTED_SOURCES}")
 
-# Ensure directories exist (SILVER)
-SILVER_DIR.mkdir(parents=True, exist_ok=True)
-SILVER_DIR_EVENTS.mkdir(parents=True, exist_ok=True)
-SILVER_DIR_COMPETITIONS.mkdir(parents=True, exist_ok=True)
-SILVER_DIR_LINEUPS.mkdir(parents=True, exist_ok=True)
-SILVER_DIR_MATCHES.mkdir(parents=True, exist_ok=True)
-SILVER_DIR_360_EVENTS.mkdir(parents=True, exist_ok=True)
-
-# Define directories (GOLD)
-GOLD_DIR = Path("data/gold")
-
-# Ensure directories exist (GOLD)
-GOLD_DIR.mkdir(parents=True, exist_ok=True)
+    for dir_path in dirs.values():
+        dir_path.mkdir(parents=True, exist_ok=True)

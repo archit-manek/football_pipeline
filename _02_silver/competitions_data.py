@@ -1,31 +1,30 @@
-import logging
 import polars as pl
 from pathlib import Path
 
-from utils.constants import BRONZE_DIR_COMPETITIONS, SILVER_DIR_COMPETITIONS, SILVER_LOGS_COMPETITIONS_PATH
-from utils.dataframe import flatten_columns, add_missing_columns, cast_columns_to_schema_types, log_schema_differences, get_int_columns_from_schema, fix_int_columns_with_nans, is_source_newer
-from schemas.competitions_schema import competitions_schema
+from utils.constants import get_open_data_dirs
+from utils.dataframe import *
+from schemas.competitions_schema import COMPETITIONS_SCHEMA
 from utils.logging import setup_logger
 
-log_path = Path(SILVER_LOGS_COMPETITIONS_PATH)
-logger = setup_logger(log_path, "competitions")
-
-
-
-###
-# Process competitions data from bronze to silver layer
-###
 def process_competitions_data():
     """
-    Process competitions data to create silver layer.
+    Process competitions data from bronze to silver layer for a specific source.
+
     """
-    logger.info("Starting silver competitions processing pipeline...")
+    # Get source-specific directories
+    dirs = get_open_data_dirs()
     
-    bronze_comp_path = Path(BRONZE_DIR_COMPETITIONS) / "competitions.parquet"
-    silver_comp_path = Path(SILVER_DIR_COMPETITIONS) / "competitions.parquet"
+    # Set up logging
+    log_path = dirs["logs_silver"] / "competitions.log"
+    logger = setup_logger(log_path, f"bronze_open_data_competitions")
+    
+    logger.info(f"Starting silver competitions processing pipeline for open-data...")
+    
+    bronze_comp_path = dirs["bronze_competitions"] / "competitions.parquet"
+    silver_comp_path = dirs["silver_competitions"] / "competitions.parquet"
 
     # Ensure the silver directory exists
-    Path(SILVER_DIR_COMPETITIONS).mkdir(parents=True, exist_ok=True)
+    dirs["silver_competitions"].mkdir(parents=True, exist_ok=True)
 
     # Check if source is newer than output
     if silver_comp_path.exists() and not is_source_newer(bronze_comp_path, silver_comp_path):
@@ -37,46 +36,29 @@ def process_competitions_data():
     pl.Config.set_tbl_cols(0)
 
     try:
+        # Read bronze competitions data
         df = pl.read_parquet(bronze_comp_path)
         competitions_count = len(df)
+        logger.info(f"Processing {competitions_count} competitions")
 
-        # Flatten columns (may not be needed for competitions but kept for consistency)
+        # Flatten columns
         df = flatten_columns(df)
         
         # Add missing columns
-        expected_cols = set(competitions_schema.columns.keys())
+        expected_cols = set(COMPETITIONS_SCHEMA.keys())
         df = add_missing_columns(df, expected_cols)
-        
-        # Fix integer columns to preserve Int64 type (prevent Float64 conversion)
-        int_cols = get_int_columns_from_schema(competitions_schema)
-        df = fix_int_columns_with_nans(df, int_cols)
-        
-        # Cast columns to schema types (excluding datetime columns we'll handle separately)
-        df = cast_columns_to_schema_types(df, competitions_schema)
-        
-        # Ensure correct dtypes for DateTime columns
-        df = df.with_columns([
-            pl.col("match_updated").str.strptime(pl.Datetime, "%Y-%m-%dT%H:%M:%S", strict=False),
-            pl.col("match_available").str.strptime(pl.Datetime, "%Y-%m-%dT%H:%M:%S", strict=False),
-        ])
 
-        # Validate schema
-        log_schema_differences(df, competitions_schema, logger, bronze_comp_path)
-
+        # Write to silver layer
         df.write_parquet(silver_comp_path, compression="snappy")
+        logger.info(f"Successfully processed {competitions_count} competitions to silver layer")
 
-        logger.info("=== SILVER COMPETITIONS PROCESSING SUMMARY ===")
-        logger.info(f"Files processed: 1")
-        logger.info(f"Files skipped: 0")
-        logger.info(f"Files with errors: 0")
-        logger.info(f"Total competitions processed: {competitions_count:,}")
-        logger.info("===============================================")
-        
     except Exception as e:
-        logger.warning(f"Failed to process competitions data: {e}")
-        logger.info("=== SILVER COMPETITIONS PROCESSING SUMMARY ===")
-        logger.info(f"Files processed: 0")
-        logger.info(f"Files skipped: 0")
-        logger.info(f"Files with errors: 1")
-        logger.info("===============================================")
+        logger.error(f"Failed to process competitions data: {e}")
         raise
+
+    logger.info(f"=== SILVER COMPETITIONS PROCESSING SUMMARY OPEN-DATA ===")
+    logger.info(f"Competitions processed: {competitions_count}")
+
+if __name__ == "__main__":
+    # Process both sources
+    process_competitions_data()

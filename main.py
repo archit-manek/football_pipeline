@@ -1,27 +1,116 @@
 import os
-from _01_bronze.bronze_ingest import bronze_ingest
+from utils.constants import SUPPORTED_SOURCES, ensure_directories_exist, get_open_data_dirs
+from utils.logging import setup_logger
+# Bronze layer imports
+from _01_bronze.open_data_ingest import open_data_ingest
+# from _01_bronze.j1_league_ingest import j1_league_ingest
+
+# Silver layer imports
 from _02_silver.events_data import process_events_data
 from _02_silver.competitions_data import process_competitions_data
 from _02_silver.lineups_data import process_lineups_data
 from _02_silver.matches_data import process_matches_data
-from _02_silver._360_events import process_360_events_data
+from _02_silver.events_360 import process_360_events_data
+
+# Gold layer imports
 from _03_gold.xg_model import build_xg_model
 
-# Set up logging
-os.makedirs("logs/bronze", exist_ok=True)
-os.makedirs("logs/silver", exist_ok=True)
+OPEN_DATA_DIRS = get_open_data_dirs()
+log_path = OPEN_DATA_DIRS["logs_bronze"] / "bronze.log"
+logger = setup_logger(log_path, f"bronze_layer")
+
+def run_bronze_layer(source_name: str | None = None):
+    """
+    Run bronze layer processing for specified source(s).
+    """
+
+    print(f"\n=== BRONZE LAYER PROCESSING ===")
+
+    ensure_directories_exist(source_name)
+
+    if source_name:
+        sources = [source_name]
+    else:
+        sources = SUPPORTED_SOURCES
+    
+    for source in sources:
+        print(f"\nProcessing {source} bronze layer...")
+        
+        match source:
+            case "open-data":
+                open_data_ingest()
+            case "j1-league":
+                # j1_league_ingest()
+                pass
+            case _:
+                print(f"Unknown source: {source}")
+
+def run_silver_layer(source_name: str | None = None):
+    """
+    Run silver layer processing for specified source(s).
+    """
+    print(f"\n=== SILVER LAYER PROCESSING ===")
+    
+    if source_name:
+        sources = [source_name]
+    else:
+        sources = SUPPORTED_SOURCES
+    
+    for source in sources:
+        print(f"\nProcessing {source_name} silver layer...")
+        
+        match source:
+            case "open-data":
+                process_events_data()
+                process_competitions_data()
+                process_lineups_data()
+                process_matches_data()
+                process_360_events_data()
+            case "j1-league":
+                pass
+            case _:
+                print(f"Unknown source: {source}")
+
+
+def run_gold_layer(source_name: str | None = None):
+    """
+    Run gold layer processing for specified source(s).
+    """
+    print(f"\n=== GOLD LAYER PROCESSING ===")
+    
+    if source_name:
+        sources = [source_name]
+    else:
+        sources = SUPPORTED_SOURCES
+    
+    for source in sources:
+        print(f"\nProcessing {source} gold layer...")
+        
+        # TODO: Update build_xg_model to accept source_name parameter
+        # build_xg_model(source)
+        print(f"Gold layer processing for {source} not yet implemented")
 
 if __name__ == "__main__":
+    # Choose which layers and sources to process
+    # You can modify these variables to control what gets processed
+    
+    PROCESS_BRONZE = False
+    PROCESS_SILVER = False
+    PROCESS_GOLD = False
+    
+    # Specify source to process (None = all sources)
+    SOURCE_TO_PROCESS = "open-data"  # "open-data", "j1-league", or None for all
+    
     # BRONZE STAGE
-    # bronze_ingest()
+    if PROCESS_BRONZE:
+        run_bronze_layer(SOURCE_TO_PROCESS)
 
     # SILVER STAGE
-    # process_events_data()
-    # process_competitions_data()
-    # process_lineups_data()
-    # process_matches_data()
-    process_360_events_data()
+    if PROCESS_SILVER:
+        run_silver_layer(SOURCE_TO_PROCESS)
 
     # GOLD STAGE
-    # Build xG model
-    # build_xg_model()
+    if PROCESS_GOLD:
+        run_gold_layer(SOURCE_TO_PROCESS)
+        
+    print("\nPipeline execution complete!")

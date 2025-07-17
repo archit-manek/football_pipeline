@@ -1,26 +1,28 @@
 import polars as pl
 from pathlib import Path
 
-from utils.constants import BRONZE_DIR_MATCHES, SILVER_DIR_MATCHES, SILVER_LOGS_MATCHES_PATH
-from utils.dataframe import flatten_columns, add_missing_columns, cast_columns_to_schema_types, log_schema_differences, get_int_columns_from_schema, fix_int_columns_with_nans, is_source_newer
-from schemas.matches_schema import matches_schema
+from utils.constants import get_open_data_dirs
+from utils.dataframe import *
+from schemas.matches_schema import MATCHES_SCHEMA
 from utils.logging import setup_logger
 
-log_path = Path(SILVER_LOGS_MATCHES_PATH)
-logger = setup_logger(log_path, "matches")
-
-
-###
-# Process matches data from bronze to silver layer
-###
 def process_matches_data():
-    logger.info("Starting silver matches processing pipeline...")
+    """
+    Process matches data from bronze to silver layer for a specific source.
     
-    bronze_matches_dir = Path(BRONZE_DIR_MATCHES)
-    silver_matches_dir = Path(SILVER_DIR_MATCHES)
-
-    # Ensure silver directory exists
-    silver_matches_dir.mkdir(parents=True, exist_ok=True)
+    Args:
+    """
+    # Get source-specific directories
+    dirs = get_open_data_dirs()
+    
+    # Set up logging
+    log_path = dirs["logs_silver"] / "matches.log"
+    logger = setup_logger(log_path, f"bronze_open_data_matches")
+    
+    logger.info(f"Starting silver matches processing pipeline for open-data...")
+    
+    bronze_matches_dir = dirs["bronze_matches"]
+    silver_matches_dir = dirs["silver_matches"]
 
     # Get all bronze files
     bronze_files = list(bronze_matches_dir.glob("*.parquet"))
@@ -53,18 +55,8 @@ def process_matches_data():
             df = flatten_columns(df)
             
             # Add missing columns
-            expected_cols = set(matches_schema.columns.keys())
+            expected_cols = set(MATCHES_SCHEMA.keys())
             df = add_missing_columns(df, expected_cols)
-
-            # Fix integer columns to preserve Int64 type (prevent Float64 conversion)
-            int_cols = get_int_columns_from_schema(matches_schema)
-            df = fix_int_columns_with_nans(df, int_cols)
-
-            # Cast to schema types
-            df = cast_columns_to_schema_types(df, matches_schema)
-
-            # Validate the DataFrame against the schema
-            log_schema_differences(df, matches_schema, logger, parquet_file)
 
             df.write_parquet(silver_path, compression="snappy")
             processed_count += 1
@@ -79,11 +71,11 @@ def process_matches_data():
             continue
 
     # Summary
-    logger.info("=== SILVER MATCHES PROCESSING SUMMARY ===")
+    logger.info(f"=== SILVER MATCHES PROCESSING SUMMARY OPEN-DATA ===")
     logger.info(f"Files processed: {processed_count}")
     logger.info(f"Files skipped: {skipped_count}")
     logger.info(f"Files with errors: {error_count}")
     logger.info(f"Total matches processed: {total_matches:,}")
-    if processed_count > 0:
-        logger.info(f"Average matches per file: {total_matches // processed_count:,}")
-    logger.info("==========================================")
+
+if __name__ == "__main__":
+    process_matches_data()

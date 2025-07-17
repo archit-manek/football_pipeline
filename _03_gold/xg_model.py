@@ -14,7 +14,7 @@ from typing import Tuple, Dict, Any, Optional
 import warnings
 warnings.filterwarnings('ignore')
 
-from utils.constants import SILVER_DIR_EVENTS, GOLD_DIR
+from utils.constants import get_open_data_dirs
 from utils.logging import setup_logger
 
 # Set up logging
@@ -32,10 +32,12 @@ class XGModel:
     - Model persistence and loading
     """
     
-    def __init__(self):
+    def __init__(self, source_id: str = "open-data"):
         self.model = None
         self.feature_columns = []
-        self.gold_dir = Path(GOLD_DIR)
+        self.source_id = source_id
+        self.dirs = get_open_data_dirs()
+        self.gold_dir = self.dirs["gold"]
         self.gold_dir.mkdir(parents=True, exist_ok=True)
         
     def load_shot_data(self, max_files: Optional[int] = None) -> pl.DataFrame:
@@ -48,9 +50,9 @@ class XGModel:
         Returns:
             DataFrame with all shot events
         """
-        logger.info("Loading shot data from silver events...")
+        logger.info(f"Loading shot data from silver events (source: {self.source_id})...")
         
-        events_dir = Path(SILVER_DIR_EVENTS)
+        events_dir = self.dirs["silver_events"]
         shot_data = []
         
         files_processed = 0

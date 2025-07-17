@@ -1,23 +1,28 @@
 from pathlib import Path
 import polars as pl
-from schemas.lineups_schema import lineups_schema
-from utils.constants import BRONZE_DIR_LINEUPS, SILVER_DIR_LINEUPS, SILVER_LOGS_LINEUPS_PATH
-from utils.dataframe import flatten_columns, log_schema_differences, fix_int_columns_with_nans, add_missing_columns, cast_columns_to_schema_types, get_int_columns_from_schema, is_source_newer
+from schemas.lineups_schema import LINEUPS_SCHEMA
+from utils.constants import get_open_data_dirs
+from utils.dataframe import *
 from utils.logging import setup_logger
 
-log_path = Path(SILVER_LOGS_LINEUPS_PATH)
-logger = setup_logger(log_path, "lineups")
-
-
-
-###
-# Process lineups data from the bronze layer to the silver layer.
-###
 def process_lineups_data():
-    logger.info("Starting silver lineups processing pipeline...")
+    """
+    Process lineups data from bronze to silver layer for a specific source.
     
-    bronze_lineups_dir = Path(BRONZE_DIR_LINEUPS)
-    silver_lineups_dir = Path(SILVER_DIR_LINEUPS)
+    Args:
+
+    """
+    # Get source-specific directories
+    dirs = get_open_data_dirs()
+    
+    # Set up logging TODO: debug
+    log_path = dirs["logs_silver"] / "lineups.log"
+    logger = setup_logger(log_path, f"bronze_open_data_lineups")
+    
+    logger.info(f"Starting silver lineups processing pipeline for open-data...")
+    
+    bronze_lineups_dir = dirs["bronze_lineups"]
+    silver_lineups_dir = dirs["silver_lineups"]
 
     # Ensure silver directory exists
     silver_lineups_dir.mkdir(parents=True, exist_ok=True)
@@ -53,19 +58,9 @@ def process_lineups_data():
             df = flatten_columns(df)
             
             # Add missing columns
-            expected_cols = set(lineups_schema.columns.keys())
+            expected_cols = set(LINEUPS_SCHEMA.keys())
             df = add_missing_columns(df, expected_cols)
             
-            # Fix integer columns to preserve Int64 type (prevent Float64 conversion)
-            int_cols = get_int_columns_from_schema(lineups_schema)
-            df = fix_int_columns_with_nans(df, int_cols)
-            
-            # Cast columns to schema types
-            df = cast_columns_to_schema_types(df, lineups_schema)
-
-            # Validate the DataFrame against the schema
-            log_schema_differences(df, lineups_schema, logger, parquet_file)
-
             df.write_parquet(silver_path, compression="snappy")
             processed_count += 1
             
@@ -79,13 +74,14 @@ def process_lineups_data():
             continue
 
     # Summary
-    logger.info("=== SILVER LINEUPS PROCESSING SUMMARY ===")
+    logger.info(f"=== SILVER LINEUPS PROCESSING SUMMARY ===")
     logger.info(f"Files processed: {processed_count}")
     logger.info(f"Files skipped: {skipped_count}")
     logger.info(f"Files with errors: {error_count}")
     logger.info(f"Total lineups processed: {total_lineups:,}")
-    if processed_count > 0:
-        logger.info(f"Average lineups per file: {total_lineups // processed_count:,}")
-    logger.info("==========================================")
+
+if __name__ == "__main__":
+    # Process both sources
+    process_lineups_data()
 
 

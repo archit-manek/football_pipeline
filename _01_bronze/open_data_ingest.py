@@ -1,17 +1,27 @@
 import logging
 from pathlib import Path
 import polars as pl
-from utils.constants import *
-from utils.dataframe import is_source_newer
+from utils.constants import get_open_data_dirs, ensure_directories_exist
+from utils.dataframe import is_source_newer, get_int_columns_from_schema
 import json
-import time
+
+from schemas.matches_schema import MATCHES_SCHEMA
+from schemas.competitions_schema import COMPETITIONS_SCHEMA
+from schemas.events_schema import EVENTS_SCHEMA
+from schemas.lineups_schema import LINEUPS_SCHEMA
+from schemas.schema_360 import SCHEMA_360
+
+OPEN_DATA_DIRS = get_open_data_dirs()
+
+# Ensure the log directory exists first
+OPEN_DATA_DIRS["logs_bronze"].mkdir(parents=True, exist_ok=True)
 
 # Logging setup
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.FileHandler("logs/bronze/pipeline.log", mode="w"),
+        logging.FileHandler(OPEN_DATA_DIRS["logs_bronze"] / "bronze_open_data.log", mode="w"),
         logging.StreamHandler()
     ]
 )
@@ -20,27 +30,25 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# Ensure the log directory exists
-Path("logs/bronze").mkdir(parents=True, exist_ok=True)
-
-
-
 def ingest_competitions_local():
     """
     Ingest competitions from the raw data directory into the bronze layer.
     """
-    competitions_path = Path("data/raw/competitions.json")
-    output_path = BRONZE_DIR_COMPETITIONS / "competitions.parquet"
+    competitions_path = OPEN_DATA_DIRS["landing_competitions"] / "competitions.json"
+    output_path = OPEN_DATA_DIRS["bronze_competitions"] / "competitions.parquet"
     
     if output_path.exists() and not is_source_newer(competitions_path, output_path):
-        logger.debug(f"{output_path} already exists and source is not newer, skipping.")
+        logger.info(f"{output_path} already exists and source is not newer, skipping.")
         return
-        
+    logger.info(f"Ingesting competitions from {competitions_path} to {output_path}")
     if competitions_path.exists():
         try:
             with open(competitions_path, "r") as f:
                 competitions = json.load(f)
-            df = pl.DataFrame(competitions)
+            if not competitions:
+                logger.info(f"No competitions found in {competitions_path}")
+                return
+            df = pl.DataFrame(competitions, schema=COMPETITIONS_SCHEMA)
             df.write_parquet(output_path)
             logger.info(f"Saved competitions to {output_path}")
         except json.JSONDecodeError as e:
@@ -48,13 +56,13 @@ def ingest_competitions_local():
         except Exception as e:
             logger.error(f"Error processing competitions data: {e}")
     else:
-        logger.warning("No competitions.json found in data/raw/.")
+        logger.warning(f"No competitions.json found in {OPEN_DATA_DIRS['landing_competitions']}")
 
 def ingest_matches_local():
     """
     Ingest matches from the raw data directory into the bronze layer.
     """
-    matches_dir = Path("data/raw/matches")
+    matches_dir = OPEN_DATA_DIRS["landing_matches"]
     json_files = list(matches_dir.glob("*/*.json"))
     logger.info(f"Found {len(json_files)} match files to process")
     
@@ -64,7 +72,7 @@ def ingest_matches_local():
     for json_file in json_files:
         comp_id = json_file.parent.name
         season_id = json_file.stem
-        matches_path = BRONZE_DIR_MATCHES / f"matches_{comp_id}_{season_id}.parquet"
+        matches_path = OPEN_DATA_DIRS["bronze_matches"] / f"matches_{comp_id}_{season_id}.parquet"
         if matches_path.exists() and not is_source_newer(json_file, matches_path):
             logger.debug(f"{matches_path} already exists and source is not newer, skipping.")
             skipped_count += 1
@@ -72,13 +80,13 @@ def ingest_matches_local():
         try:
             with open(json_file, "r") as f:
                 data = json.load(f)
-            if data:
-                df = pl.DataFrame(data)
-                df.write_parquet(matches_path)
-                logger.info(f"Saved matches to {matches_path}")
-                processed_count += 1
-            else:
+            if not data:
                 logger.info(f"No matches found for competition {comp_id}, season {season_id}")
+                continue        
+            df = pl.DataFrame(data, schema=MATCHES_SCHEMA)
+            df.write_parquet(matches_path)
+            logger.info(f"Saved matches to {matches_path}")
+            processed_count += 1
         except json.JSONDecodeError as e:
             logger.warning(f"Could not decode JSON for competition {comp_id}, season {season_id}: {e}")
         except Exception as e:
@@ -90,8 +98,8 @@ def ingest_lineups_local():
     """
     Ingest lineups from the raw data directory into the bronze layer.
     """
-    lineups_dir = Path("data/raw/lineups")
-    bronze_lineups_dir = BRONZE_DIR_LINEUPS
+    lineups_dir = OPEN_DATA_DIRS["landing_lineups"]
+    bronze_lineups_dir = OPEN_DATA_DIRS["bronze_lineups"]
     bronze_lineups_dir.mkdir(parents=True, exist_ok=True)
     
     json_files = list(lineups_dir.glob("*.json"))
@@ -110,21 +118,13 @@ def ingest_lineups_local():
         try:
             with open(json_file, "r") as f:
                 data = json.load(f)
-            all_teams = []
-            for team in data:
-                # Flatten lineup dicts for each team
-                lineup = team["lineup"]
-                for player in lineup:
-                    player["match_id"] = match_id
-                    player["team_id"] = team["team_id"]
-                all_teams.extend(lineup)
-            if all_teams:
-                df = pl.DataFrame(all_teams)
-                df.write_parquet(parquet_path)
-                logger.info(f"Saved lineups for match {match_id} to {parquet_path}")
-                processed_count += 1
-            else:
+            if not data:
                 logger.info(f"No lineups found for match {match_id}")
+                continue
+            df = pl.DataFrame(data, schema=LINEUPS_SCHEMA)
+            df.write_parquet(parquet_path)
+            logger.info(f"Saved lineups for match {match_id} to {parquet_path}")    
+            processed_count += 1
         except json.JSONDecodeError as e:
             logger.warning(f"Could not decode JSON for match {match_id}: {e}")
         except Exception as e:
@@ -136,8 +136,8 @@ def ingest_events_local():
     """
     Ingest events from the raw data directory into the bronze layer.
     """
-    events_dir = Path("data/raw/events")
-    bronze_events_dir = BRONZE_DIR_EVENTS
+    events_dir = OPEN_DATA_DIRS["landing_events"]
+    bronze_events_dir = OPEN_DATA_DIRS["bronze_events"]
     bronze_events_dir.mkdir(parents=True, exist_ok=True)
     
     json_files = list(events_dir.glob("*.json"))
@@ -159,15 +159,14 @@ def ingest_events_local():
         try:
             with open(json_file, "r") as f:
                 data = json.load(f)
-            if data:
-                df = pl.DataFrame(data)
-                df.write_parquet(events_path, compression="snappy")
-                processed_count += 1
-                # Log only every 100 files to reduce I/O overhead
-                if processed_count % 100 == 0:
-                    logger.info(f"Processed {processed_count} event files...")
-            else:
+            if not data:
                 logger.info(f"No events found for match {match_id}")
+                continue
+            df = pl.DataFrame(data, schema=EVENTS_SCHEMA)
+            df.write_parquet(events_path, compression="snappy")
+            processed_count += 1
+            if processed_count % 100 == 0:
+                logger.info(f"Processed {processed_count} events")
         except json.JSONDecodeError as e:
             logger.warning(f"Could not decode JSON for match {match_id}: {e}")
         except Exception as e:
@@ -179,8 +178,8 @@ def ingest_360_events_local():
     """
     Ingest 360 events from the raw data directory into the bronze layer.
     """
-    raw_360_dir = Path("data/raw/three-sixty")
-    bronze_360_dir = BRONZE_DIR_360_EVENTS
+    raw_360_dir = OPEN_DATA_DIRS["landing_360_events"]
+    bronze_360_dir = OPEN_DATA_DIRS["bronze_360_events"]
     bronze_360_dir.mkdir(parents=True, exist_ok=True)
     
     json_files = list(raw_360_dir.glob("*.json"))
@@ -201,16 +200,14 @@ def ingest_360_events_local():
         try:
             with open(json_file, "r") as f:
                 data = json.load(f)
-            if data:
-                df = pl.DataFrame(data)
-                df.write_parquet(parquet_path, compression="snappy")
-                processed_count += 1
-                # Log only every 50 files to reduce I/O overhead
-                if processed_count % 50 == 0:
-                    logger.info(f"Processed {processed_count} 360 event files...")
-            else:
+            if not data:
                 logger.info(f"No 360 data for match {match_id}")
-                error_count += 1
+                continue
+            df = pl.DataFrame(data, schema=SCHEMA_360)
+            df.write_parquet(parquet_path, compression="snappy")
+            processed_count += 1
+            if processed_count % 50 == 0:
+                logger.info(f"Processed {processed_count} 360 events")
         except json.JSONDecodeError as e:
             logger.warning(f"Could not decode JSON for match {match_id} in file {json_file}: {e}")
             error_count += 1
@@ -220,14 +217,22 @@ def ingest_360_events_local():
     
     logger.info(f"360 events processing complete: {processed_count} processed, {skipped_count} skipped, {error_count} errors")
 
-def bronze_ingest():
+def open_data_ingest():
     """
-    Ingest all bronze layer data from the raw data directory.
+    Ingest all open-data bronze layer data from the raw data directory.
     """
-    logger.info("Starting bronze layer ingestion...")
+    logger.info("Starting open-data bronze layer ingestion...")
     
-    ingest_competitions_local()
-    ingest_matches_local()
-    ingest_lineups_local()
-    ingest_events_local()
+    # Ensure all necessary directories exist
+    ensure_directories_exist("open-data")
+    
+    # ingest_competitions_local()
+    # ingest_matches_local()
+    # ingest_lineups_local()
+    # ingest_events_local()
     ingest_360_events_local()
+    
+    logger.info("Open-data bronze layer ingestion complete!")
+
+if __name__ == "__main__":
+    open_data_ingest()
