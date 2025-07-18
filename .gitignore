@@ -179,7 +179,6 @@ tmp*/
 
 # Raw and processed data
 data/
-docs/
 *.parquet
 *.csv
 *.json

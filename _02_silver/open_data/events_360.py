@@ -1,13 +1,8 @@
-import importlib
-from pathlib import Path
 import polars as pl
 from utils.constants import get_open_data_dirs
 from utils.dataframe import *
 from utils.logging import setup_logger
-
-# Import the 360 schema using importlib since the filename starts with a number
-schema_module = importlib.import_module('schemas.schema_360')
-schema_360 = schema_module.SCHEMA_360
+from schemas.open_data.schema_360 import SCHEMA_360
 
 def process_360_events_data():
     """
@@ -22,7 +17,7 @@ def process_360_events_data():
     log_path = dirs["logs_silver"] / "360_events.log"
     logger = setup_logger(log_path, f"bronze_open_data_360_events")
     
-    logger.info(f"Starting silver 360 events processing pipeline for open-data...")
+    logger.info(f"Starting silver 360 events processing pipeline for open_data...")
 
     bronze_360_events_dir = dirs["bronze_360_events"]
     silver_360_events_dir = dirs["silver_360_events"]
@@ -59,10 +54,6 @@ def process_360_events_data():
 
             # Flatten columns
             df = flatten_columns(df)
-            
-            # Add missing columns
-            expected_cols = set(schema_360.columns.keys())
-            df = add_missing_columns(df, expected_cols)
 
             df.write_parquet(silver_path, compression="snappy")
             processed_count += 1
@@ -77,12 +68,11 @@ def process_360_events_data():
             continue
 
     # Summary
-    logger.info(f"=== SILVER 360 EVENTS PROCESSING SUMMARY OPEN-DATA ===")
+    logger.info(f"=== SILVER 360 EVENTS PROCESSING SUMMARY OPEN_DATA ===")
     logger.info(f"Files processed: {processed_count}")
     logger.info(f"Files skipped: {skipped_count}")
     logger.info(f"Files with errors: {error_count}")
-    logger.info(f"Total 360 events processed: {total_events:,}")
+    logger.info(f"Total 360 events processed: {total_events}")
 
 if __name__ == "__main__":
-    # Process both sources
     process_360_events_data()

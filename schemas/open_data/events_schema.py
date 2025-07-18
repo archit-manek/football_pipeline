@@ -4,7 +4,7 @@ EVENTS_SCHEMA = {
     "id": pl.String,
     "index": pl.Int64,
     "period": pl.Int64,
-    "timestamp": pl.String,  # Skip type validation for timestamps
+    "timestamp": pl.String,
     "minute": pl.Int64,
     "second": pl.Int64,
     "possession": pl.Int64,
@@ -18,8 +18,8 @@ EVENTS_SCHEMA = {
     "team_id": pl.Int64,
     "team_name": pl.String,
     "tactics_formation": pl.Float64,
-    "related_events": pl.List,  # Changed from String to Object for lists
-    "location": pl.List,  # Changed from String to Object for arrays
+    "related_events": pl.List(pl.String),
+    "location": pl.List(pl.Float64),
     "player_id": pl.Int64,
     "player_name": pl.String,
     "position_id": pl.Int64,
@@ -30,13 +30,13 @@ EVENTS_SCHEMA = {
     "pass_angle": pl.Float64,
     "pass_height_id": pl.Int64,
     "pass_height_name": pl.String,
-    "pass_end_location": pl.List,  # Changed from String to Object for arrays
+    "pass_end_location": pl.List(pl.Float64),
     "pass_body_part_id": pl.Int64,
     "pass_body_part_name": pl.String,
     "pass_type_id": pl.Int64,
     "pass_type_name": pl.String,
     "under_pressure": pl.Boolean,
-    "carry_end_location": pl.List,  # Changed from String to Object for arrays
+    "carry_end_location": pl.List(pl.Float64),
     "pass_outcome_id": pl.Int64,
     "pass_outcome_name": pl.String,
     "ball_receipt_outcome_id": pl.Int64,
@@ -49,7 +49,7 @@ EVENTS_SCHEMA = {
     "dribble_outcome_id": pl.Int64,
     "dribble_outcome_name": pl.String,
     "shot_statsbomb_xg": pl.Float64,
-    "shot_end_location": pl.List,  # Changed from String to Object for arrays
+    "shot_end_location": pl.List(pl.Float64),
     "shot_key_pass_id": pl.String,
     "shot_body_part_id": pl.Int64,
     "shot_body_part_name": pl.String,
@@ -59,7 +59,7 @@ EVENTS_SCHEMA = {
     "shot_type_name": pl.String,
     "shot_outcome_id": pl.Int64,
     "shot_outcome_name": pl.String,
-    "goalkeeper_end_location": pl.List,  # Changed from String to Object for arrays
+    "goalkeeper_end_location": pl.List(pl.Float64),
     "goalkeeper_position_id": pl.Int64,
     "goalkeeper_position_name": pl.String,
     "goalkeeper_type_id": pl.Int64,
@@ -102,7 +102,7 @@ EVENTS_SCHEMA = {
     "bad_behaviour_card_name": pl.String,
     "ball_recovery_offensive": pl.Boolean,
     "tactics_lineup_jersey_number": pl.Int64,
-    "shot_freeze_frame_location": pl.List,  # Changed from String to Object for arrays
+    "shot_freeze_frame_location": pl.List(pl.Float64),
     "shot_freeze_frame_teammate": pl.Boolean,
     "tactics_lineup_player_id": pl.Int64,
     "tactics_lineup_player_name": pl.String,
@@ -116,10 +116,10 @@ EVENTS_SCHEMA = {
     "y": pl.Float64,
     "end_x": pl.Float64,
     "end_y": pl.Float64,
-    "possession_event_count": pl.Int64,  # Changed from String to Int64
-    "possession_pass_count": pl.Int64,  # Changed from String to Int64
-    "possession_player_count": pl.Int64,  # Changed from String to Int64
-    "possession_duration": pl.Float64,  # Changed from Int64 to Float64 for seconds
+    "possession_event_count": pl.Int64,
+    "possession_pass_count": pl.Int64,
+    "possession_player_count": pl.Int64,
+    "possession_duration": pl.Float64,
     "total_xG": pl.Float64,
     
     # Adding common extra columns found in the data
@@ -160,14 +160,4 @@ EVENTS_SCHEMA = {
     
     "off_camera": pl.Boolean,
     "out": pl.Boolean,
-    
-    # NEW: Adding missing columns from schema validation warnings
-    "goalkeeper_shot_saved_off_target": pl.Boolean,
-    "shot_saved_off_target": pl.Boolean,
-    "goalkeeper_shot_saved_to_post": pl.Boolean,
-    "shot_saved_to_post": pl.Boolean,
-    "goalkeeper_success_in_play": pl.Boolean,
-    "half_start_late_video_start": pl.Boolean,
-    "foul_committed_penalty": pl.Boolean,
-    "foul_won_penalty": pl.Boolean,
 }

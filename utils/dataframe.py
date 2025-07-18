@@ -1,6 +1,5 @@
 import polars as pl
 from pathlib import Path
-from typing import Dict, List
 
 def is_source_newer(source_path: Path, output_path: Path) -> bool:
     """
@@ -16,22 +15,6 @@ def is_source_newer(source_path: Path, output_path: Path) -> bool:
     if not output_path.exists():
         return True
     return source_path.stat().st_mtime > output_path.stat().st_mtime
-
-def get_int_columns_from_schema(schema: Dict[str, pl.DataType]) -> List[str]:
-    """
-    Return all column names whose declared Polars dtype is pl.Int64.
-    
-    Args
-    ----
-    schema : dict[str, pl.DataType]
-        Your explicit Polars schema mapping.
-    
-    Returns
-    -------
-    list[str]
-        Column names declared as Int64.
-    """
-    return [name for name, dtype in schema.items() if dtype == pl.Int64]
 
 def flatten_columns(df):
     """
@@ -67,11 +50,64 @@ def flatten_columns(df):
     df = df.rename({col: col.replace('.', '_') for col in df.columns})
     return df
 
-def add_missing_columns(df: pl.DataFrame, expected_cols: set) -> pl.DataFrame:
+def apply_schema_flexibly(df: pl.DataFrame, target_schema: dict) -> pl.DataFrame:
     """
-    Add missing columns to the DataFrame with null values.
+    Apply schema to dataframe flexibly, handling missing columns and type mismatches.
     """
-    missing = expected_cols - set(df.columns)
-    for col in missing:
-        df = df.with_columns([pl.lit(None).alias(col)])
+    # Add missing columns with null values
+    for col_name, col_type in target_schema.items():
+        if col_name not in df.columns:
+            df = df.with_columns(pl.lit(None).cast(col_type).alias(col_name))
+    
+    # Cast existing columns to target types, handling errors gracefully
+    cast_expressions = []
+    for col_name, col_type in target_schema.items():
+        if col_name in df.columns:
+            try:
+                cast_expressions.append(pl.col(col_name).cast(col_type, strict=False).alias(col_name))
+            except:
+                # If casting fails, keep original column
+                cast_expressions.append(pl.col(col_name))
+    
+    # Cast all at once
+    if cast_expressions:
+        df = df.with_columns(cast_expressions)
+    
+    # Select only columns that are in the target schema
+    df = df.select([col for col in target_schema.keys() if col in df.columns])
+    
     return df
+
+def create_dataframe_safely(data, target_schema: dict) -> pl.DataFrame:
+    """
+    Create a DataFrame from JSON data safely, avoiding schema inference issues.
+    Includes recursive struct flattening for nested JSON data.
+    """
+    try:
+        # First try to create with inferred schema
+        df = pl.DataFrame(data)
+        # Flatten any nested structs using the comprehensive flatten_columns function
+        df = flatten_columns(df)
+        return apply_schema_flexibly(df, target_schema)
+    except Exception as e:
+        # If that fails, try with increased schema inference length
+        try:
+            df = pl.DataFrame(data, infer_schema_length=10000)
+            df = flatten_columns(df)
+            return apply_schema_flexibly(df, target_schema)
+        except Exception as e2:
+            # If that fails, create with all string columns first, then cast
+            try:
+                # Force all columns to be strings initially to avoid inference issues
+                df = pl.DataFrame(data, infer_schema_length=0)  # This forces string inference
+                df = flatten_columns(df)
+                return apply_schema_flexibly(df, target_schema)
+            except Exception as e3:
+                # Last resort: create with very limited schema inference
+                try:
+                    df = pl.DataFrame(data, infer_schema_length=1)
+                    df = flatten_columns(df)
+                    return apply_schema_flexibly(df, target_schema)
+                except Exception as e4:
+                    # If all else fails, raise the original error with context
+                    raise Exception(f"Failed to create DataFrame safely. Original error: {e}. Last error: {e4}")

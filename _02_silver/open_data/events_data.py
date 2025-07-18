@@ -3,8 +3,8 @@ import numpy as np
 import pandera as pa
 from pathlib import Path
 from utils.constants import get_open_data_dirs
-from utils.dataframe import *
-from schemas.events_schema import EVENTS_SCHEMA
+from utils.dataframe import is_source_newer
+from schemas.open_data.events_schema import EVENTS_SCHEMA
 from utils.logging import setup_logger
 
 def process_events_data():
@@ -18,7 +18,7 @@ def process_events_data():
     log_path = dirs["logs_silver"] / "events.log"
     logger = setup_logger(log_path, f"bronze_open_data_events")
     
-    logger.info(f"Starting silver events processing pipeline for open-data...")
+    logger.info(f"Starting silver events processing pipeline for open_data...")
     
     bronze_events_dir = dirs["bronze_events"]
     silver_events_dir = dirs["silver_events"]
@@ -53,20 +53,15 @@ def process_events_data():
             events_count = len(df)
             total_events += events_count
             
-            # Flatten columns
-            df = flatten_columns(df)
-            
-            # Add missing columns
-            expected_cols = set(EVENTS_SCHEMA.keys())
-            df = add_missing_columns(df, expected_cols)
-            
             # Process timestamps
-            df = df.with_columns(
-                pl.col("timestamp").str.strptime(pl.Datetime, "%H:%M:%S%.f", strict=False)
+            df = (
+                df
+                .with_columns(
+                    pl.col("timestamp")
+                    .cast(pl.Utf8)
+                    .str.strptime(pl.Time, "%H:%M:%S%.3f", strict=False)
+                )
             )
-            
-            # Enrich locations
-            df = enrich_locations(df)
             
             # Add possession stats
             df = add_possession_stats(df)
@@ -84,28 +79,24 @@ def process_events_data():
             continue
 
     # Summary
-    logger.info(f"=== SILVER EVENTS PROCESSING SUMMARY OPEN-DATA ===")
+    logger.info(f"=== SILVER EVENTS PROCESSING SUMMARY OPEN_DATA ===")
     logger.info(f"Files processed: {processed_count}")
     logger.info(f"Files skipped: {skipped_count}")
     logger.info(f"Files with errors: {error_count}")
-    logger.info(f"Total events processed: {total_events:,}")
-
-### Location Normalization Functions ###
-
-def enrich_locations(df):
-    """
-    Enrich location data with additional fields.
-    """
-    # Add location enrichment logic here
-    return df
+    logger.info(f"Total events processed: {total_events}")
 
 def add_possession_stats(df):
     """
     Add possession statistics to the dataframe.
     """
     # Add possession stats logic here
+
+    df = df.with_columns([
+        pl.col("possession").count().over("possession").alias("possession_event_count"),
+        pl.col("possession").filter(pl.col("type_name") == "Pass").count().over("possession").alias("possession_pass_count"),
+        pl.col("player_id").n_unique().over("possession").alias("possession_player_count")
+    ])
     return df
 
 if __name__ == "__main__":
-    # Process both sources
     process_events_data()

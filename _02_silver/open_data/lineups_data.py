@@ -1,6 +1,6 @@
 from pathlib import Path
 import polars as pl
-from schemas.lineups_schema import LINEUPS_SCHEMA
+from schemas.open_data.lineups_schema import LINEUPS_SCHEMA
 from utils.constants import get_open_data_dirs
 from utils.dataframe import *
 from utils.logging import setup_logger
@@ -19,7 +19,7 @@ def process_lineups_data():
     log_path = dirs["logs_silver"] / "lineups.log"
     logger = setup_logger(log_path, f"bronze_open_data_lineups")
     
-    logger.info(f"Starting silver lineups processing pipeline for open-data...")
+    logger.info(f"Starting silver lineups processing pipeline for open_data...")
     
     bronze_lineups_dir = dirs["bronze_lineups"]
     silver_lineups_dir = dirs["silver_lineups"]
@@ -57,10 +57,6 @@ def process_lineups_data():
             # Flatten columns
             df = flatten_columns(df)
             
-            # Add missing columns
-            expected_cols = set(LINEUPS_SCHEMA.keys())
-            df = add_missing_columns(df, expected_cols)
-            
             df.write_parquet(silver_path, compression="snappy")
             processed_count += 1
             
@@ -81,7 +77,6 @@ def process_lineups_data():
     logger.info(f"Total lineups processed: {total_lineups:,}")
 
 if __name__ == "__main__":
-    # Process both sources
     process_lineups_data()
 
 

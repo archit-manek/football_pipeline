@@ -3,7 +3,7 @@ from pathlib import Path
 
 from utils.constants import get_open_data_dirs
 from utils.dataframe import *
-from schemas.matches_schema import MATCHES_SCHEMA
+from schemas.open_data.matches_schema import MATCHES_SCHEMA
 from utils.logging import setup_logger
 
 def process_matches_data():
@@ -19,7 +19,7 @@ def process_matches_data():
     log_path = dirs["logs_silver"] / "matches.log"
     logger = setup_logger(log_path, f"bronze_open_data_matches")
     
-    logger.info(f"Starting silver matches processing pipeline for open-data...")
+    logger.info(f"Starting silver matches processing pipeline for open_data...")
     
     bronze_matches_dir = dirs["bronze_matches"]
     silver_matches_dir = dirs["silver_matches"]
@@ -54,10 +54,6 @@ def process_matches_data():
             # Flatten columns
             df = flatten_columns(df)
             
-            # Add missing columns
-            expected_cols = set(MATCHES_SCHEMA.keys())
-            df = add_missing_columns(df, expected_cols)
-
             df.write_parquet(silver_path, compression="snappy")
             processed_count += 1
             
@@ -71,7 +67,7 @@ def process_matches_data():
             continue
 
     # Summary
-    logger.info(f"=== SILVER MATCHES PROCESSING SUMMARY OPEN-DATA ===")
+    logger.info(f"=== SILVER MATCHES PROCESSING SUMMARY OPEN_DATA ===")
     logger.info(f"Files processed: {processed_count}")
     logger.info(f"Files skipped: {skipped_count}")
     logger.info(f"Files with errors: {error_count}")

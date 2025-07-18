@@ -13,13 +13,13 @@ SILVER_DIR = DATA_DIR / "silver"
 GOLD_DIR = DATA_DIR / "gold"
 
 # Supported data sources
-SUPPORTED_SOURCES = ["open-data", "j1-league"]
+SUPPORTED_SOURCES = ["open_data", "j1_league"]
 
 def get_open_data_dirs():
     """
-    Returns directory paths for open-data source (StatsBomb structure).
+    Returns directory paths for open_data source (StatsBomb structure).
     """
-    source_name = "open-data"
+    source_name = "open_data"
 
     output_dirs = {
         # Landing data directories
@@ -59,16 +59,16 @@ def get_open_data_dirs():
 
 def get_j1_league_dirs():
     """
-    Returns directory paths for j1-league source (different structure).
+    Returns directory paths for j1_league source (different structure).
     """
-    source_name = "j1-league"
+    source_name = "j1_league"
     return {
         # Landing data directories (J1 League specific structure)
         "landing": LANDING_DIR / source_name,
         "landing_sb_matches": LANDING_DIR / source_name / "sb-matches",
         "landing_sb_events": LANDING_DIR / source_name / "sb-events",
         "landing_hudl_physical": LANDING_DIR / source_name / "hudl-physical",
-        "landing_mappings": LANDING_DIR / source_name,
+        "landing_mappings": LANDING_DIR / source_name / "mappings",
         
         # Bronze layer directories
         "bronze": BRONZE_DIR / source_name,
@@ -90,9 +90,9 @@ def get_j1_league_dirs():
         
         # Log directories
         "logs": LOGS_DIR / source_name,
-        "logs_bronze": LOGS_DIR / source_name,
-        "logs_silver": LOGS_DIR / source_name,
-        "logs_gold": LOGS_DIR / source_name
+        "logs_bronze": LOGS_DIR / source_name / "bronze",
+        "logs_silver": LOGS_DIR / source_name / "silver",
+        "logs_gold": LOGS_DIR / source_name / "gold"
     }
 
 def ensure_directories_exist(source_name: str | None = None):
@@ -100,9 +100,9 @@ def ensure_directories_exist(source_name: str | None = None):
     Ensures all necessary directories for a given source exist.
     If source_id is None, creates general directories.
     """
-    if source_name == "open-data":
+    if source_name == "open_data":
         dirs = get_open_data_dirs() 
-    elif source_name == "j1-league":
+    elif source_name == "j1_league":
         dirs = get_j1_league_dirs()
     else:
         raise ValueError(f"Invalid source_name: {source_name}. Supported: {SUPPORTED_SOURCES}")
