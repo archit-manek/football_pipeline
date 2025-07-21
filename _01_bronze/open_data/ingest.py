@@ -1,16 +1,11 @@
 import logging
 from pathlib import Path
 import polars as pl
+import pandas as pd
 from utils.constants import get_open_data_dirs, ensure_directories_exist
-from utils.dataframe import is_source_newer, apply_schema_flexibly, create_dataframe_safely
+from utils.dataframe import is_source_newer
 import json
 from typing import Dict, Any, Callable, Optional
-
-from schemas.open_data.matches_schema import MATCHES_SCHEMA
-from schemas.open_data.competitions_schema import COMPETITIONS_SCHEMA
-from schemas.open_data.events_schema import EVENTS_SCHEMA
-from schemas.open_data.lineups_schema import LINEUPS_SCHEMA
-from schemas.open_data.schema_360 import SCHEMA_360
 
 OPEN_DATA_DIRS = get_open_data_dirs()
 
@@ -35,20 +30,18 @@ def ingest_data_generic(
     data_type: str,
     landing_dir: Path,
     bronze_dir: Path,
-    schema: Dict[str, Any],
     file_pattern: str = "*.json",
     output_prefix: str = "",
     log_frequency: int = 50,
     custom_loader: Optional[Callable] = None
 ):
     """
-    Generic function to ingest JSON data from landing to bronze layer.
+    Simple bronze layer ingestion: JSON -> Parquet with minimal processing.
     
     Args:
-        data_type: Name of data type for logging (e.g., "events", "matches")
+        data_type: Name of data type for logging
         landing_dir: Directory containing source JSON files
         bronze_dir: Directory to write parquet files
-        schema: Schema dictionary for the data
         file_pattern: Glob pattern for finding files
         output_prefix: Prefix for output filenames
         log_frequency: How often to log progress
@@ -62,10 +55,6 @@ def ingest_data_generic(
     processed_count = 0
     skipped_count = 0
     error_count = 0
-    
-    # Configure Polars for better performance
-    pl.Config.set_tbl_rows(0)
-    pl.Config.set_tbl_cols(0)
     
     for json_file in json_files:
         try:
@@ -100,21 +89,35 @@ def ingest_data_generic(
                 logger.info(f"No {data_type} found in {json_file.name}")
                 continue
             
-            # Create DataFrame and apply schema
-            df = create_dataframe_safely(data, schema)
+            # Bronze layer: Simple JSON flattening and Parquet conversion
+            try:
+                # Use pandas for JSON normalization (handles nested structures well)
+                df_pd = pd.json_normalize(data)
+                # Convert to Polars for efficient Parquet writing
+                df = pl.from_pandas(df_pd)
+                # Basic column name standardization (dots to underscores)
+                df = df.rename({col: col.replace('.', '_') for col in df.columns})
+            except Exception as e:
+                # Fallback: Direct Polars processing
+                logger.warning(f"Pandas normalization failed for {json_file.name}: {e} | Using Polars fallback")
+                df = pl.DataFrame(data, infer_schema_length=0)  # Let Polars infer basic types
+                df = df.rename({col: col.replace('.', '_') for col in df.columns})
+            
+            # Write to Parquet (Bronze layer stores data as-is, minimal processing)
             df.write_parquet(output_path, compression="snappy")
             
             processed_count += 1
             if processed_count % log_frequency == 0:
                 logger.info(f"Processed {processed_count} bronze {data_type}")
-                
+
         except json.JSONDecodeError as e:
             logger.warning(f"Could not decode JSON for {data_type} in {json_file}: {e}")
             error_count += 1
+            raise
         except Exception as e:
             logger.warning(f"Error processing {data_type} in {json_file}: {e}")
             error_count += 1
-    
+            raise
     # Summary
     summary_msg = f"{data_type.title()} processing complete: {processed_count} processed, {skipped_count} skipped"
     if error_count > 0:
@@ -144,15 +147,21 @@ def ingest_competitions_local():
             logger.info(f"No competitions found in {competitions_path}")
             return
         
-        # Create DataFrame and apply schema
-        df = create_dataframe_safely(competitions, COMPETITIONS_SCHEMA)
-        df.write_parquet(output_path)
-        logger.info(f"Saved competitions to {output_path}")
+        # Bronze layer: Simple processing, no complex schema validation
+        df_pd = pd.json_normalize(competitions)
+        df = pl.from_pandas(df_pd)
+        # Basic column standardization
+        df = df.rename({col: col.replace('.', '_') for col in df.columns})
+        
+        df.write_parquet(output_path, compression="snappy")
+        logger.info(f"Saved {len(df)} competitions to {output_path}")
         
     except json.JSONDecodeError as e:
         logger.error(f"Could not decode competitions JSON: {e}")
+        raise
     except Exception as e:
         logger.error(f"Error processing competitions data: {e}")
+        raise
 
 def ingest_matches_local():
     """Ingest matches from the raw data directory into the bronze layer."""
@@ -160,7 +169,6 @@ def ingest_matches_local():
         data_type="matches",
         landing_dir=OPEN_DATA_DIRS["landing_matches"],
         bronze_dir=OPEN_DATA_DIRS["bronze_matches"],
-        schema=MATCHES_SCHEMA,
         file_pattern="*/*.json",  # matches are in subdirectories
         output_prefix="matches",
         log_frequency=5
@@ -172,7 +180,6 @@ def ingest_lineups_local():
         data_type="lineups",
         landing_dir=OPEN_DATA_DIRS["landing_lineups"],
         bronze_dir=OPEN_DATA_DIRS["bronze_lineups"],
-        schema=LINEUPS_SCHEMA,
         output_prefix="lineups",
         log_frequency=10
     )
@@ -183,7 +190,6 @@ def ingest_events_local():
         data_type="events",
         landing_dir=OPEN_DATA_DIRS["landing_events"],
         bronze_dir=OPEN_DATA_DIRS["bronze_events"],
-        schema=EVENTS_SCHEMA,
         output_prefix="events",
         log_frequency=50
     )
@@ -194,7 +200,6 @@ def ingest_360_events_local():
         data_type="360 events",
         landing_dir=OPEN_DATA_DIRS["landing_360_events"],
         bronze_dir=OPEN_DATA_DIRS["bronze_360_events"],
-        schema=SCHEMA_360,
         output_prefix="events_360",
         log_frequency=50
     )

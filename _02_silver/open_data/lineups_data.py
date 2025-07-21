@@ -54,8 +54,9 @@ def process_lineups_data():
             lineups_count = len(df)
             total_lineups += lineups_count
 
-            # Flatten columns
-            df = flatten_columns(df)
+            # Data is already flattened by pandas json_normalize in bronze layer
+            # Convert dot notation to underscore notation for silver layer standardization
+            df = normalize_column_names(df)
             
             df.write_parquet(silver_path, compression="snappy")
             processed_count += 1

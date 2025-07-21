@@ -41,8 +41,9 @@ def process_competitions_data():
         competitions_count = len(df)
         logger.info(f"Processing {competitions_count} competitions")
 
-        # Flatten columns
-        df = flatten_columns(df)
+        # Data is already flattened by pandas json_normalize in bronze layer
+        # Convert dot notation to underscore notation for silver layer standardization
+        df = normalize_column_names(df)
         
         # Write to silver layer
         df.write_parquet(silver_comp_path, compression="snappy")

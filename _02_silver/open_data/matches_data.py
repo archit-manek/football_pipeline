@@ -51,8 +51,9 @@ def process_matches_data():
             matches_count = len(df)
             total_matches += matches_count
 
-            # Flatten columns
-            df = flatten_columns(df)
+            # Data is already flattened by pandas json_normalize in bronze layer
+            # Convert dot notation to underscore notation for silver layer standardization
+            df = normalize_column_names(df)
             
             df.write_parquet(silver_path, compression="snappy")
             processed_count += 1

@@ -12,7 +12,7 @@ J1_LEAGUE_EVENTS_SCHEMA = {
     "possession": pl.Int64,
     "duration": pl.String,
     "related_events": pl.List(pl.String),
-    "location": pl.List(pl.String),
+    "location": pl.List(pl.Float64),
     "type_id": pl.Int64,
     "type_name": pl.String,
     "possession_team_id": pl.Int64,

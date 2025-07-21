@@ -90,11 +90,11 @@ if __name__ == "__main__":
     
     
     PROCESS_BRONZE = True
-    PROCESS_SILVER = True
+    PROCESS_SILVER = False
     PROCESS_GOLD = False
     
     # Specify source to process (None = all sources)
-    SOURCE_TO_PROCESS = "open_data"  # "open_data", "j1_league", or None for all
+    SOURCE_TO_PROCESS = "j1_league"  # "open_data", "j1_league", or None for all
     ensure_directories_exist(SOURCE_TO_PROCESS)
     
     # BRONZE STAGE

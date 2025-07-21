@@ -3,7 +3,7 @@ import numpy as np
 import pandera as pa
 from pathlib import Path
 from utils.constants import get_open_data_dirs
-from utils.dataframe import is_source_newer
+from utils.dataframe import is_source_newer, normalize_column_names
 from schemas.open_data.events_schema import EVENTS_SCHEMA
 from utils.logging import setup_logger
 
@@ -65,6 +65,10 @@ def process_events_data():
             
             # Add possession stats
             df = add_possession_stats(df)
+
+            # Data is already flattened by pandas json_normalize in bronze layer
+            # Convert dot notation to underscore notation for silver layer standardization
+            df = normalize_column_names(df)
             
             df.write_parquet(silver_path, compression="snappy")
             processed_count += 1

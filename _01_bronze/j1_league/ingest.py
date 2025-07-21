@@ -1,8 +1,8 @@
 import json
 import polars as pl
-
+import pandas as pd
 from utils.constants import get_j1_league_dirs, ensure_directories_exist
-from utils.dataframe import is_source_newer, create_dataframe_safely, apply_schema_flexibly
+from utils.dataframe import is_source_newer, create_dataframe_safely, apply_schema_flexibly, serialize_all_lists
 from utils.logging import setup_logger
 
 # Import J1 League schemas
@@ -21,26 +21,10 @@ J1_LEAGUE_DIRS["logs_bronze"].mkdir(parents=True, exist_ok=True)
 log_path = J1_LEAGUE_DIRS["logs_bronze"] / "j1_league_bronze.log"
 logger = setup_logger(log_path, "j1_league_bronze")
 
-def create_events_dataframe_safely(data, target_schema: dict) -> pl.DataFrame:
-    """
-    Create a DataFrame from events JSON data safely, handling mixed types.
-    This is a specialized version for j1_league events data.
-    """
-    try:
-        # Force all columns to be strings initially to avoid mixed type issues
-        df = pl.DataFrame(data, infer_schema_length=0)
-        logger.info(f"Created DataFrame with {len(df)} rows and {len(df.columns)} columns")
-        
-        # Apply schema flexibly
-        df = apply_schema_flexibly(df, target_schema)
-        
-        return df
-    except Exception as e:
-        logger.error(f"Failed to create events DataFrame: {e}")
-        raise
-
 def ingest_j1_league_matches():
-    """Ingest J1 League matches data from StatsBomb format."""
+    """
+    Ingest J1 League matches data from StatsBomb format.
+    """
     logger.info("Starting J1 League matches ingestion...")
     
     matches_file = J1_LEAGUE_DIRS["landing_sb_matches"] / "sb_matches.json"
@@ -68,7 +52,7 @@ def ingest_j1_league_matches():
             return
         
         # Create DataFrame with safe schema application
-        df = create_dataframe_safely(matches_data, J1_LEAGUE_MATCHES_SCHEMA)
+        df = create_dataframe_safely(matches_data, J1_LEAGUE_MATCHES_SCHEMA, logger)
         
         # Write to parquet
         df.write_parquet(output_path, compression="snappy")
@@ -77,11 +61,15 @@ def ingest_j1_league_matches():
         
     except json.JSONDecodeError as e:
         logger.error(f"JSON decode error in matches file: {e}")
+        raise
     except Exception as e:
         logger.error(f"Error processing matches data: {e}")
+        raise
 
 def ingest_j1_league_events():
-    """Ingest J1 League events data from StatsBomb format."""
+    """
+    Ingest J1 League events data from StatsBomb format.
+    """
     logger.info("Starting J1 League events ingestion...")
     
     events_file = J1_LEAGUE_DIRS["landing_sb_events"] / "sb_events.json"
@@ -97,16 +85,38 @@ def ingest_j1_league_events():
     if not events_file.exists():
         logger.warning(f"Events file {events_file} not found, skipping.")
         return
-    
-    # NOTE: Events data processing is currently skipped due to complex schema issues
-    # The events data has highly variable schema across different events with mixed types
-    # This requires specialized handling that will be implemented in a future iteration
-    logger.warning("Events data processing is currently skipped due to complex schema issues")
-    logger.warning("Events data has highly variable schema with mixed types that requires specialized handling")
-    return
+
+    try:
+        with open(events_file, "r") as f:
+            events_data = json.load(f)
+
+        events_data = serialize_all_lists(events_data)
+
+        # Use pandas for JSON normalization (handles nested structures well)
+        df_pd = pd.json_normalize(events_data)
+
+        # Convert to Polars for efficient Parquet writing
+        df = pl.from_pandas(df_pd)
+
+        # Basic column name standardization (dots to underscores)
+        df = df.rename({col: col.replace('.', '_') for col in df.columns})
+        
+        # Write to parquet
+        df.write_parquet(output_path, compression="snappy")
+
+        logger.info(f"Successfully processed {len(df)} events to {output_path}")
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error in events file: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Error processing events data: {e}")
+        raise
+
     
 def ingest_j1_league_physical():
-    """Ingest J1 League physical data from HUDL format."""
+    """
+    Ingest J1 League physical data from HUDL format.
+    """
     logger.info("Starting J1 League physical data ingestion...")
     
     physical_file = J1_LEAGUE_DIRS["landing_hudl_physical"] / "hudl_physical.json"
@@ -134,7 +144,7 @@ def ingest_j1_league_physical():
             return
         
         # Create DataFrame with safe schema application
-        df = create_dataframe_safely(physical_data, J1_LEAGUE_PHYSICAL_SCHEMA)
+        df = create_dataframe_safely(physical_data, J1_LEAGUE_PHYSICAL_SCHEMA, logger)
         
         # Write to parquet
         df.write_parquet(output_path, compression="snappy")
@@ -143,11 +153,15 @@ def ingest_j1_league_physical():
         
     except json.JSONDecodeError as e:
         logger.error(f"JSON decode error in physical file: {e}")
+        raise
     except Exception as e:
         logger.error(f"Error processing physical data: {e}")
+        raise
 
 def ingest_j1_league_mappings():
-    """Ingest J1 League mapping data from CSV files."""
+    """
+    Ingest J1 League mapping data from CSV files.
+    """
     logger.info("Starting J1 League mappings ingestion...")
     
     mappings_dir = J1_LEAGUE_DIRS["landing_mappings"]
@@ -182,7 +196,7 @@ def ingest_j1_league_mappings():
             df = pl.read_csv(csv_file)
             
             # Apply schema flexibly
-            df = apply_schema_flexibly(df, schema)
+            df = apply_schema_flexibly(df, schema, logger)
             
             # Write to parquet
             df.write_parquet(output_file, compression="snappy")
@@ -207,10 +221,10 @@ def j1_league_ingest():
     
     try:
         # Ingest all data types
-        ingest_j1_league_matches()
+        # ingest_j1_league_matches()
         ingest_j1_league_events()
-        ingest_j1_league_physical()
-        ingest_j1_league_mappings()
+        # ingest_j1_league_physical()
+        # ingest_j1_league_mappings()
         
         logger.info("J1 League bronze layer ingestion completed successfully!")
         
