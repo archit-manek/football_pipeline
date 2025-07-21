@@ -9,7 +9,7 @@ COMPETITIONS_SCHEMA = {
     "competition_youth":        pl.Boolean,
     "competition_international":pl.Boolean,
     "season_name":              pl.Utf8,
-    "match_updated":            pl.Utf8,    # keep as text; parse in Silver
+    "match_updated":            pl.Utf8,
     "match_updated_360":        pl.Utf8,
     "match_available_360":      pl.Utf8,
     "match_available":          pl.Utf8,

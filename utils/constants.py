@@ -109,3 +109,14 @@ def ensure_directories_exist(source_name: str | None = None):
 
     for dir_path in dirs.values():
         dir_path.mkdir(parents=True, exist_ok=True)
+
+def as_relative_path(path, root=PROJECT_ROOT):
+    """
+    Returns a path relative to the project root.
+    If not possible, returns the original path as string.
+    """
+    path = Path(path)
+    try:
+        return str(path.relative_to(root))
+    except ValueError:
+        return str(path)
