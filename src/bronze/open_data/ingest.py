@@ -1,40 +1,26 @@
 import logging
-from utils.constants import get_open_data_dirs, ensure_directories_exist
-from utils.dataframe import ingest_json_batch_to_parquet, ingest_json_to_parquet
+from src.utils.settings import get_open_data_dirs, ensure_directories_exist
+from src.utils.dataframe import ingest_json_batch_to_parquet, ingest_json_to_parquet
+from src.utils.logging import setup_logger
 
+# Get directory paths
 OPEN_DATA_DIRS = get_open_data_dirs()
 
-# Ensure the log directory exists first
-OPEN_DATA_DIRS["logs_bronze"].mkdir(parents=True, exist_ok=True)
-
-# Logging setup
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler(OPEN_DATA_DIRS["logs_bronze"] / "bronze_open_data.log", mode="w"),
-        logging.StreamHandler()
-    ]
-)
-
-# Create a logger for this module
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-def ingest_competitions_local():
+def ingest_competitions_local(logger):
     """
     Ingest competitions from the raw data directory into the bronze layer.
     """
     ingest_json_to_parquet(
         OPEN_DATA_DIRS["landing_competitions"] / "competitions.json",
         OPEN_DATA_DIRS["bronze_competitions"] / "competitions.parquet",
-        logger=None,
+        logger=logger,
         description="competitions"
     )
 
-def ingest_matches_local():
+def ingest_matches_local(logger):
     """
     Ingest matches from the raw data directory into the bronze layer.
+    Maintains the season_id/match_id.json structure in bronze layer.
     """
     ingest_json_batch_to_parquet(
         input_dir=OPEN_DATA_DIRS["landing_matches"],
@@ -42,11 +28,11 @@ def ingest_matches_local():
         logger=logger,
         description="matches",
         file_pattern="*/*.json",  # matches are in subdirectories
-        output_prefix="matches",
+        maintain_structure=True,  # Maintain season_id/match_id structure
         log_frequency=5
     )
 
-def ingest_lineups_local():
+def ingest_lineups_local(logger):
     """
     Ingest lineups from the raw data directory into the bronze layer.
     """
@@ -59,7 +45,7 @@ def ingest_lineups_local():
         log_frequency=10
     )
 
-def ingest_events_local():
+def ingest_events_local(logger):
     """
     Ingest events from the raw data directory into the bronze layer.
     """
@@ -72,7 +58,7 @@ def ingest_events_local():
         log_frequency=50
     )
 
-def ingest_360_events_local():
+def ingest_360_events_local(logger):
     """
     Ingest 360 events from the raw data directory into the bronze layer.
     """
@@ -89,16 +75,20 @@ def open_data_ingest():
     """
     Ingest all open_data bronze layer data from the raw data directory.
     """
-    logger.info("Starting open_data bronze layer ingestion...")
-    
-    # Ensure all necessary directories exist
+    # Ensure all necessary directories exist first
     ensure_directories_exist("open_data")
     
-    ingest_competitions_local()
-    ingest_matches_local()
-    ingest_lineups_local()
-    ingest_events_local()
-    ingest_360_events_local()
+    # Setup logging after directories are created
+    log_path = OPEN_DATA_DIRS["logs_bronze"] / "bronze_open_data.log"
+    logger = setup_logger(log_path, "open_data_bronze_layer")
+    
+    logger.info("Starting open_data bronze layer ingestion...")
+    
+    ingest_competitions_local(logger)
+    ingest_matches_local(logger)
+    ingest_lineups_local(logger)
+    ingest_events_local(logger)
+    ingest_360_events_local(logger)
     
     logger.info("Open_data bronze layer ingestion complete!")
 

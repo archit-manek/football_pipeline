@@ -1,0 +1,27 @@
+# Core data processing
+pandas
+polars
+pyarrow
+
+# Configuration and environment
+python-dotenv
+PyYAML
+
+# Utilities
+tqdm
+requests
+rich
+
+# Data validation
+pandera
+
+# Machine learning
+scikit-learn
+numpy
+matplotlib
+seaborn
+joblib
+
+# Development tools
+pip-tools
+socceraction[statsbomb]

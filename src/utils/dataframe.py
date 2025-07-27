@@ -3,8 +3,8 @@ import pandas as pd
 from pathlib import Path
 import json
 
-from utils.io import is_source_newer
-from utils.logging import NullLogger
+from src.utils.io import is_source_newer
+from src.utils.logging import NullLogger
 
 def serialize_all_lists(data, logger=None, log_every=100000, description=""):
     """
@@ -99,11 +99,12 @@ def ingest_json_batch_to_parquet(
     file_pattern: str = "*.json",
     serialize_lists: bool = True,
     output_prefix: str = "",
-    log_frequency: int = 50
+    log_frequency: int = 50,
+    maintain_structure: bool = False
 ):
     """
-    Ingest all JSON files in a directory to Parquet files (one per input).
-
+    Ingest all JSON files in a directory to Parquet files.
+    
     Args:
         input_dir (Path): The path to the input directory.
         output_dir (Path): The path to the output directory.
@@ -113,6 +114,7 @@ def ingest_json_batch_to_parquet(
         serialize_lists (bool, optional): Whether to serialize lists to JSON strings. Defaults to True.
         output_prefix (str, optional): The prefix to add to the output filename. Defaults to "".
         log_frequency (int, optional): The frequency of logging. Defaults to 50.
+        maintain_structure (bool, optional): Whether to maintain directory structure. Defaults to False.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     json_files = list(input_dir.glob(file_pattern))
@@ -120,13 +122,22 @@ def ingest_json_batch_to_parquet(
     processed_count = 0
     skipped_count = 0
     error_count = 0
+    
     for json_file in json_files:
-        # Construct output filename
-        if output_prefix:
-            output_filename = f"{output_prefix}_{json_file.stem}.parquet"
+        if maintain_structure:
+            # Calculate relative path from input_dir to maintain structure
+            relative_path = json_file.relative_to(input_dir)
+            # Create output path with same structure but .parquet extension
+            output_file = output_dir / relative_path.with_suffix('.parquet')
+            # Ensure the output directory exists
+            output_file.parent.mkdir(parents=True, exist_ok=True)
         else:
-            output_filename = f"{json_file.stem}.parquet"
-        output_file = output_dir / output_filename
+            # Construct output filename (flattened structure)
+            if output_prefix:
+                output_filename = f"{output_prefix}_{json_file.stem}.parquet"
+            else:
+                output_filename = f"{json_file.stem}.parquet"
+            output_file = output_dir / output_filename
 
         try:
             ingest_json_to_parquet(
@@ -146,6 +157,8 @@ def ingest_json_batch_to_parquet(
     summary_msg = f"{description.title()} batch ingest complete: {processed_count} processed, {error_count} errors"
     logger.info(summary_msg)
     return processed_count, skipped_count, error_count
+
+
 
 ## CSV INGESTION FUNCTIONS ##
 

@@ -1,8 +1,6 @@
 import polars as pl
-from utils.constants import get_open_data_dirs, as_relative_path
-from utils.schema import enforce_schema
-from schemas.open_data.competitions_schema import COMPETITIONS_SCHEMA
-from utils.logging import setup_logger
+from src.utils.settings import get_open_data_dirs
+from src.utils.logging import setup_logger
 
 OPEN_DATA_DIR = get_open_data_dirs()
 logger = setup_logger(OPEN_DATA_DIR["silver_competitions"] / "competitions.log", "competitions")
@@ -27,8 +25,6 @@ def process_competitions_data():
         competitions = pl.read_parquet(bronze_path)
         logger.info(f"Loaded competitions parquet from {bronze_path} with shape {competitions.shape}")
 
-        competitions = enforce_schema(competitions, COMPETITIONS_SCHEMA)
-
         competitions = competitions.with_columns(
             pl.col("competition_name")
               .map_elements(clean_comp_name, return_dtype=pl.Utf8)
@@ -46,7 +42,7 @@ def process_competitions_data():
         logger.info("Sorted competitions DataFrame.")
 
         competitions.write_parquet(str(silver_path))
-        logger.info(f"Saved cleaned competitions to {as_relative_path(silver_path)} with shape {competitions.shape}")
+        logger.info(f"Saved cleaned competitions to {silver_path} with shape {competitions.shape}")
     
     except Exception as e:
         logger.error(f"Error in processing competitions data: {e}", exc_info=True)

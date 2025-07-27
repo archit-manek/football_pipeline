@@ -1,17 +1,15 @@
-from utils.constants import SUPPORTED_SOURCES, ensure_directories_exist, get_open_data_dirs
-from utils.logging import setup_logger
+from src.utils.settings import SourceType, ensure_directories_exist, get_open_data_dirs
+from src.utils.logging import setup_logger
 # Bronze layer imports
-from _01_bronze.open_data.ingest import open_data_ingest
-from _01_bronze.j1_league.ingest import j1_league_ingest
+from src.bronze.open_data.ingest import open_data_ingest
+from src.bronze.j1_league.ingest import j1_league_ingest
 
 # Silver layer imports
-from _02_silver.open_data.competitions import process_competitions_data
+from src.silver.open_data.competitions import process_competitions_data
 
 # Gold layer imports
 
 OPEN_DATA_DIRS = get_open_data_dirs()
-log_path = OPEN_DATA_DIRS["logs_bronze"] / "bronze.log"
-logger = setup_logger(log_path, f"bronze_layer")
 
 def run_bronze_layer(source_name: str | None = None):
     """
@@ -23,7 +21,7 @@ def run_bronze_layer(source_name: str | None = None):
     if source_name:
         sources = [source_name]
     else:
-        sources = SUPPORTED_SOURCES
+        sources = [s.value for s in SourceType]
     
     for source in sources:
         print(f"\nProcessing {source} bronze layer...")
@@ -45,7 +43,7 @@ def run_silver_layer(source_name: str | None = None):
     if source_name:
         sources = [source_name]
     else:
-        sources = SUPPORTED_SOURCES
+        sources = [s.value for s in SourceType]
     
     for source in sources:
         print(f"\nProcessing {source_name} silver layer...")
@@ -67,7 +65,7 @@ def run_gold_layer(source_name: str | None = None):
     if source_name:
         sources = [source_name]
     else:
-        sources = SUPPORTED_SOURCES
+        sources = [s.value for s in SourceType]
     
     for source in sources:
         print(f"\nProcessing {source} gold layer...")
@@ -81,8 +79,8 @@ if __name__ == "__main__":
     # You can modify these variables to control what gets processed
     
     
-    PROCESS_BRONZE = False
-    PROCESS_SILVER = True
+    PROCESS_BRONZE = True
+    PROCESS_SILVER = False
     PROCESS_GOLD = False
     
     # Specify source to process (None = all sources)
