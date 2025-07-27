@@ -1,8 +1,8 @@
 import polars as pl
-from utils.constants import get_open_data_dirs, as_relative_path
-from utils.schema import enforce_schema
-from schemas.open_data.competitions_schema import COMPETITIONS_SCHEMA
-from utils.logging import setup_logger
+from src.utils.constants import get_open_data_dirs, as_relative_path
+from src.utils.schema import enforce_schema
+from src.schemas.open_data.competitions_schema import COMPETITIONS_SCHEMA
+from src.utils.logging import setup_logger
 
 OPEN_DATA_DIR = get_open_data_dirs()
 logger = setup_logger(OPEN_DATA_DIR["silver_competitions"] / "competitions.log", "competitions")

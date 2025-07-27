@@ -1,11 +1,11 @@
-from utils.constants import SUPPORTED_SOURCES, ensure_directories_exist, get_open_data_dirs
-from utils.logging import setup_logger
+from src.utils.constants import SUPPORTED_SOURCES, ensure_directories_exist, get_open_data_dirs
+from src.utils.logging import setup_logger
 # Bronze layer imports
-from _01_bronze.open_data.ingest import open_data_ingest
-from _01_bronze.j1_league.ingest import j1_league_ingest
+from src.bronze.open_data.ingest import open_data_ingest
+from src.bronze.j1_league.ingest import j1_league_ingest
 
 # Silver layer imports
-from _02_silver.open_data.competitions import process_competitions_data
+from src.silver.open_data.competitions import process_competitions_data
 
 # Gold layer imports
 
@@ -81,12 +81,12 @@ if __name__ == "__main__":
     # You can modify these variables to control what gets processed
     
     
-    PROCESS_BRONZE = False
-    PROCESS_SILVER = True
+    PROCESS_BRONZE = True
+    PROCESS_SILVER = False
     PROCESS_GOLD = False
     
     # Specify source to process (None = all sources)
-    SOURCE_TO_PROCESS = "open_data"  # "open_data", "j1_league", or None for all
+    SOURCE_TO_PROCESS = "j1_league"  # "open_data", "j1_league", or None for all
     ensure_directories_exist(SOURCE_TO_PROCESS)
     
     # BRONZE STAGE

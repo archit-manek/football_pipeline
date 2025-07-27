@@ -2,7 +2,7 @@
 from pathlib import Path
 
 # Get the project root dynamically
-PROJECT_ROOT = Path(__file__).parent.parent.absolute()
+PROJECT_ROOT = Path(__file__).parent.parent.parent.absolute()
 
 # Define base directories
 DATA_DIR = PROJECT_ROOT / "data"

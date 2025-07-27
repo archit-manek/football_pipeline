@@ -1,6 +1,6 @@
 import logging
-from utils.constants import get_open_data_dirs, ensure_directories_exist
-from utils.dataframe import ingest_json_batch_to_parquet, ingest_json_to_parquet
+from src.utils.constants import get_open_data_dirs, ensure_directories_exist
+from src.utils.dataframe import ingest_json_batch_to_parquet, ingest_json_to_parquet
 
 OPEN_DATA_DIRS = get_open_data_dirs()
 

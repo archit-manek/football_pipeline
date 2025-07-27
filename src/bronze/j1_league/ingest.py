@@ -1,7 +1,7 @@
 import polars as pl
-from utils.constants import get_j1_league_dirs, ensure_directories_exist
-from utils.dataframe import ingest_json_to_parquet, ingest_csv_batch_to_parquet
-from utils.logging import setup_logger
+from src.utils.constants import get_j1_league_dirs, ensure_directories_exist
+from src.utils.dataframe import ingest_json_to_parquet, ingest_csv_batch_to_parquet
+from src.utils.logging import setup_logger
 
 # Get J1 League directories
 J1_LEAGUE_DIRS = get_j1_league_dirs()
