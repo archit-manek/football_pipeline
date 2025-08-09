@@ -1,16 +1,12 @@
 import polars as pl
-from src.utils.constants import get_j1_league_dirs, ensure_directories_exist
-from src.utils.dataframe import ingest_json_to_parquet, ingest_csv_batch_to_parquet
-from src.utils.logging import setup_logger
+from football_pipeline.utils.constants import get_j1_league_dirs, ensure_directories_exist
+from football_pipeline.utils.dataframe import ingest_json_to_parquet, ingest_csv_batch_to_parquet
+from football_pipeline.utils.logging import setup_logger
 
 # Get J1 League directories
 J1_LEAGUE_DIRS = get_j1_league_dirs()
 
-# Set up logging
-log_path = J1_LEAGUE_DIRS["logs_bronze"] / "j1_league_bronze.log"
-logger = setup_logger(log_path, "j1_league_bronze")
-
-def ingest_j1_league_events():
+def ingest_j1_league_events(logger):
     """
     Ingest J1 League events from the landing directory into the bronze layer.
     """
@@ -21,7 +17,7 @@ def ingest_j1_league_events():
         description="events",
     )
 
-def ingest_j1_league_matches():
+def ingest_j1_league_matches(logger):
     """
     Ingest J1 League matches from the landing directory into the bronze layer.
     """
@@ -32,7 +28,7 @@ def ingest_j1_league_matches():
         description="matches",
     )
 
-def ingest_j1_league_physical():
+def ingest_j1_league_physical(logger):
     """
     Ingest J1 League physical data from the landing directory into the bronze layer.
     """
@@ -43,7 +39,7 @@ def ingest_j1_league_physical():
         description="physical"
     )
 
-def ingest_j1_league_mappings():
+def ingest_j1_league_mappings(logger):
     """
     Ingest all CSV mapping files in the J1 League mappings directory.
     """
@@ -58,10 +54,18 @@ def ingest_j1_league_mappings():
         log_frequency=1,
     )
 
-def j1_league_ingest():
+def j1_league_ingest(logger=None):
     """
     Main function to ingest all J1 League bronze layer data.
+    
+    Args:
+        logger: Optional logger to use. If None, creates a new one.
     """
+    if logger is None:
+        # Setup logger only when this function is called
+        log_path = J1_LEAGUE_DIRS["logs_bronze"] / "j1_league_bronze.log"
+        logger = setup_logger(log_path, "j1_league_bronze")
+    
     logger.info("Starting J1 League bronze layer ingestion...")
     
     # Ensure all necessary directories exist
@@ -73,10 +77,10 @@ def j1_league_ingest():
     
     try:
         # Ingest all data types
-        ingest_j1_league_matches()
-        ingest_j1_league_events()
-        ingest_j1_league_physical()
-        ingest_j1_league_mappings()
+        ingest_j1_league_matches(logger)
+        ingest_j1_league_events(logger)
+        ingest_j1_league_physical(logger)
+        ingest_j1_league_mappings(logger)
         
         logger.info("J1 League bronze layer ingestion completed successfully!")
         

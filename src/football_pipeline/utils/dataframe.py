@@ -3,8 +3,8 @@ import pandas as pd
 from pathlib import Path
 import json
 
-from src.utils.io import is_source_newer
-from src.utils.logging import NullLogger
+from football_pipeline.utils.io import is_source_newer
+from football_pipeline.utils.logging import NullLogger
 
 def serialize_all_lists(data, logger=None, log_every=100000, description=""):
     """
@@ -94,7 +94,7 @@ def ingest_json_to_parquet(
 def ingest_json_batch_to_parquet(
     input_dir: Path,
     output_dir: Path,
-    logger,
+    logger=None,
     description: str = "",
     file_pattern: str = "*.json",
     serialize_lists: bool = True,
@@ -114,6 +114,8 @@ def ingest_json_batch_to_parquet(
         output_prefix (str, optional): The prefix to add to the output filename. Defaults to "".
         log_frequency (int, optional): The frequency of logging. Defaults to 50.
     """
+    if logger is None:
+        logger = NullLogger()
     output_dir.mkdir(parents=True, exist_ok=True)
     json_files = list(input_dir.glob(file_pattern))
     logger.info(f"Found {len(json_files)} {description} files to process.")

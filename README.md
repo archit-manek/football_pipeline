@@ -14,21 +14,8 @@ The pipeline uses a three layer Medallion structure:
 * **Silver** – Cleaned nested columns and derived new columns
 * **Gold** – Feature-engineered tables for modeling (e.g., shot angle, distance, goal label)
 
----
+## Setup (for contributors)
 
-### Technologies Used
-
-* `polars` for transformation
-* `parquet` for storage
-* StatsBomb Open Data for event-level input
-
----
-
-### Data Directory Layout
-
-```
-data/
-├── bronze/    # Raw match/event JSONs (from StatsBomb)
-├── silver/    # Cleaned data tables
-└── gold/      # Engineered features
-```
+```bash
+pip install -e .
+python src/football_pipeline/tools/update_requirements.py  # Only needed if you want requirements.txt

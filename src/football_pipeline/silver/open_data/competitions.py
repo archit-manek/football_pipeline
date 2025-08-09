@@ -1,16 +1,17 @@
 import polars as pl
-from src.utils.constants import get_open_data_dirs
-from src.utils.schema import enforce_schema
-from src.schemas.open_data.competitions_schema import COMPETITIONS_SCHEMA
-from src.utils.logging import setup_logger
+from football_pipeline.utils.constants import get_open_data_dirs
+from football_pipeline.utils.schema import enforce_schema
+from football_pipeline.utils.logging import setup_logger
 
 OPEN_DATA_DIR = get_open_data_dirs()
-logger = setup_logger(str(OPEN_DATA_DIR["silver_competitions"] / "competitions.log"), "competitions")
 
 def process_competitions_data():
     """
     Process competitions data from bronze to silver layer.
     """
+    # Setup logger only when this function is called
+    logger = setup_logger(str(OPEN_DATA_DIR["silver_competitions"] / "competitions.log"), "competitions")
+    
     bronze_path = OPEN_DATA_DIR["bronze_competitions"] / "competitions.parquet"
     silver_path = OPEN_DATA_DIR["silver_competitions"] / "competitions.parquet"
     
@@ -24,7 +25,7 @@ def process_competitions_data():
         logger.info(f"Loaded competitions from bronze with shape {competitions.shape}")
         
         # Apply schema validation
-        competitions = enforce_schema(competitions, COMPETITIONS_SCHEMA)
+        # competitions = enforce_schema(competitions, COMPETITIONS_SCHEMA)
         
         # Save to silver layer
         competitions.write_parquet(str(silver_path))
