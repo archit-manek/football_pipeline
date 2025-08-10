@@ -4,11 +4,12 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent.parent.parent))
 
-from src.utils.constants import get_open_data_dirs
+from football_pipeline.utils.constants import DATA_DIR
 
-OPEN_DATA_DIRS = get_open_data_dirs()
-LANDING_DIR = OPEN_DATA_DIRS["landing"]
-datafolder = str(OPEN_DATA_DIRS["landing"])  # Use the landing directory
+# Get paths dynamically when needed
+source_path = "open_data/data"
+landing_dir = DATA_DIR / "landing" / source_path
+datafolder = str(landing_dir)  # Use the landing directory
 SBL = StatsBombLoader(root=datafolder, getter="local")
 
 # Load the data

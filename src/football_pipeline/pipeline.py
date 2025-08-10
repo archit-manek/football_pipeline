@@ -5,7 +5,7 @@ This module contains the main pipeline execution functions that can be
 imported and used both by the CLI and the main.py script.
 """
 
-from football_pipeline.utils.constants import SUPPORTED_SOURCES, ensure_directories_exist, get_open_data_dirs
+from football_pipeline.utils.constants import SUPPORTED_SOURCES, DATA_DIR, LOGS_DIR
 from football_pipeline.utils.logging import setup_logger
 from football_pipeline.config import get_processing_config, get_logging_config
 
@@ -19,14 +19,14 @@ from football_pipeline.silver.open_data.competitions import process_competitions
 # Gold layer imports
 # TODO: Import gold layer functions when implemented
 
-OPEN_DATA_DIRS = get_open_data_dirs()
+# Paths are now dynamic - no global variables needed
 
 def run_bronze_layer(source_name: str | None = None):
     """
     Run bronze layer processing for specified source(s).
     """
     # Setup logger only when this function is called
-    log_path = OPEN_DATA_DIRS["logs_bronze"] / "bronze.log"
+    log_path = LOGS_DIR / "open_data" / "bronze" / "bronze.log"
     logger = setup_logger(log_path, "bronze_layer")
 
     # Get error handling configuration
@@ -91,7 +91,7 @@ def run_silver_layer(source_name: str | None = None):
     Run silver layer processing for specified source(s).
     """
     # Setup logger for silver layer
-    log_path = OPEN_DATA_DIRS["logs_silver"] / "silver.log"
+    log_path = LOGS_DIR / "open_data" / "silver" / "silver.log"
     logger = setup_logger(log_path, "silver_layer")
     
     logger.info("=== SILVER LAYER PROCESSING ===")
@@ -127,7 +127,7 @@ def run_gold_layer(source_name: str | None = None):
     Run gold layer processing for specified source(s).
     """
     # Setup logger for gold layer
-    log_path = OPEN_DATA_DIRS["logs_gold"] / "gold.log"
+    log_path = LOGS_DIR / "open_data" / "gold" / "gold.log"
     logger = setup_logger(log_path, "gold_layer")
     
     logger.info("=== GOLD LAYER PROCESSING ===")
@@ -164,7 +164,7 @@ def run_pipeline(bronze: bool = True, silver: bool = False, gold: bool = False, 
         source: Source to process (None for all sources)
     """
     # Setup main pipeline logger
-    main_log_path = OPEN_DATA_DIRS["logs"] / "pipeline.log"
+    main_log_path = LOGS_DIR / "open_data" / "pipeline.log"
     
     # Load configuration
     logging_config = get_logging_config()
@@ -183,7 +183,9 @@ def run_pipeline(bronze: bool = True, silver: bool = False, gold: bool = False, 
     try:
         # Ensure directories exist
         main_logger.debug("Ensuring directories exist...")
-        ensure_directories_exist(source)
+        for layer in ["landing", "bronze", "silver", "gold"]:
+            (DATA_DIR / layer).mkdir(parents=True, exist_ok=True)
+        LOGS_DIR.mkdir(parents=True, exist_ok=True)
         main_logger.debug("✓ Directories verified")
         
         # BRONZE STAGE

@@ -1,10 +1,10 @@
 import polars as pl
-from football_pipeline.utils.constants import get_j1_league_dirs, ensure_directories_exist
+from football_pipeline.utils.constants import DATA_DIR
 from football_pipeline.utils.dataframe import ingest_json_to_parquet, ingest_csv_batch_to_parquet
 from football_pipeline.utils.logging import setup_logger
 
 # Get J1 League directories
-J1_LEAGUE_DIRS = get_j1_league_dirs()
+# Get paths dynamically when needed
 
 def ingest_j1_league_events(logger):
     """
@@ -69,7 +69,7 @@ def j1_league_ingest(logger=None):
     logger.info("Starting J1 League bronze layer ingestion...")
     
     # Ensure all necessary directories exist
-    ensure_directories_exist("j1_league")
+    # Directories are created by the pipeline
     
     # Configure Polars for better performance
     pl.Config.set_tbl_rows(0)

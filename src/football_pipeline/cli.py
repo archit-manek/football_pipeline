@@ -9,12 +9,10 @@ Keeps the surface area small and obvious.
 from __future__ import annotations
 
 import argparse
-import logging
 import sys
 
-from football_pipeline.utils.constants import SUPPORTED_SOURCES, get_open_data_dirs
-from football_pipeline.utils.logging import setup_logger
-from football_pipeline.config import get_processing_config, get_logging_config
+from football_pipeline.utils.constants import SUPPORTED_SOURCES
+from football_pipeline.config import get_processing_config
 
 def create_parser() -> argparse.ArgumentParser:
     """Create the argument parser for the CLI."""

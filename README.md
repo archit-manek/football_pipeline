@@ -30,7 +30,7 @@ pip install -e .[dev,ml,viz]
 football-pipeline --config-only
 
 # 4) Ingest Bronze (mirrors StatsBomb layout)
-football-pipeline --bronze --source open_data
+football-pipeline --bronze --source open_data/j1_league
 
 # 5) Build Silver normalized tables
 football-pipeline --silver
