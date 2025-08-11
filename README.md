@@ -39,9 +39,6 @@ football-pipeline --silver
 football-pipeline --gold
 ```
 
-> Prefer running everything in one go?  
-> `football-pipeline --all-layers` (respects your YAML config for source/log levels).
-
 ---
 
 ## ⚙️ Configuration
@@ -128,12 +125,6 @@ Now you’re ready for feature exploration, modeling, and plots.
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e .[dev,ml,viz]
 
-# Lint/format/test (if configured)
-ruff check .
-black --check .
-pytest -q
-```
-
 ### Adding a dependency (don’t use `pip install <pkg>` directly)
 1. Edit `pyproject.toml`:
    ```toml
@@ -196,9 +187,6 @@ A: Not to get started. Run Bronze → Silver (and optionally Gold) using the CLI
 
 **Q: Where are the StatsBomb files?**  
 A: Bronze mirrors the original `open-data/data/...` structure for easy auditing.
-
-**Q: Can I re-run without duplicating work?**  
-A: Bronze is immutable; Silver/Gold jobs can overwrite or partition by competition/season depending on your transform logic.
 
 ---
 
