@@ -1,4 +1,4 @@
-from football_pipeline.utils.constants import DATA_DIR
+from football_pipeline.utils.constants import DATA_DIR, LOGS_DIR
 from football_pipeline.utils.dataframe import ingest_json_batch_to_parquet, ingest_json_to_parquet
 from football_pipeline.utils.logging import setup_logger
 
@@ -94,7 +94,7 @@ def open_data_ingest(logger=None):
         logger: Optional logger to use. If None, creates a new one.
     """
     if logger is None:
-        log_path = _get_paths()["logs_bronze"] / "bronze_open_data.log"
+        log_path = LOGS_DIR / "open_data" / "bronze" / "bronze_open_data.log"
         logger = setup_logger(log_path, "open_data_bronze")
     
     logger.info("Starting open_data bronze layer ingestion...")

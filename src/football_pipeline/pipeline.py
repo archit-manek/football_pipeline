@@ -7,7 +7,6 @@ imported and used both by the CLI and the main.py script.
 
 from football_pipeline.utils.constants import SUPPORTED_SOURCES, DATA_DIR, LOGS_DIR
 from football_pipeline.utils.logging import setup_logger
-from football_pipeline.config import get_processing_config, get_logging_config
 
 # Bronze layer imports
 from football_pipeline.bronze.open_data.ingest import open_data_ingest
@@ -29,10 +28,9 @@ def run_bronze_layer(source_name: str | None = None):
     log_path = LOGS_DIR / "open_data" / "bronze" / "bronze.log"
     logger = setup_logger(log_path, "bronze_layer")
 
-    # Get error handling configuration
-    processing_config = get_processing_config()
-    fail_fast = processing_config.get('fail_fast', True)
-    continue_on_error = processing_config.get('continue_on_error', False)
+    # Simple error handling defaults
+    fail_fast = True
+    continue_on_error = False
 
     logger.info("=== BRONZE LAYER PROCESSING ===")
     logger.debug(f"Error handling: fail_fast={fail_fast}, continue_on_error={continue_on_error}")
@@ -166,15 +164,9 @@ def run_pipeline(bronze: bool = True, silver: bool = False, gold: bool = False, 
     # Setup main pipeline logger
     main_log_path = LOGS_DIR / "open_data" / "pipeline.log"
     
-    # Load configuration
-    logging_config = get_logging_config()
+    # Simple logging defaults
     import logging
-    
-    # Set logging levels from config
-    console_level = getattr(logging, logging_config.get('console_level', 'INFO'))
-    file_level = getattr(logging, logging_config.get('file_level', 'DEBUG'))
-    
-    main_logger = setup_logger(main_log_path, "main_pipeline", console_level, file_level)
+    main_logger = setup_logger(main_log_path, "main_pipeline", logging.INFO, logging.DEBUG)
     
     main_logger.info("🚀 Football Pipeline Starting")
     main_logger.info(f"Configuration: BRONZE={bronze}, SILVER={silver}, GOLD={gold}")

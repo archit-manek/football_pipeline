@@ -1,18 +1,35 @@
 import polars as pl
-from football_pipeline.utils.constants import DATA_DIR
+from football_pipeline.utils.constants import DATA_DIR, LOGS_DIR
 from football_pipeline.utils.dataframe import ingest_json_to_parquet, ingest_csv_batch_to_parquet
 from football_pipeline.utils.logging import setup_logger
 
-# Get J1 League directories
-# Get paths dynamically when needed
+# Simple helper to get j1_league paths
+def _get_paths():
+    base = {
+        "landing": DATA_DIR / "landing" / "j1_league",
+        "bronze": DATA_DIR / "bronze" / "j1_league",
+    }
+    return {
+        # Landing
+        "landing_sb_events": base["landing"] / "sb-events",
+        "landing_sb_matches": base["landing"] / "sb-matches",
+        "landing_hudl_physical": base["landing"] / "hudl-physical",
+        "landing_mappings": base["landing"] / "mappings",
+        # Bronze
+        "bronze_events": base["bronze"] / "events",
+        "bronze_matches": base["bronze"] / "matches",
+        "bronze_physical": base["bronze"] / "physical",
+        "bronze_mappings": base["bronze"] / "mappings",
+    }
 
 def ingest_j1_league_events(logger):
     """
     Ingest J1 League events from the landing directory into the bronze layer.
     """
+    p = _get_paths()
     ingest_json_to_parquet(
-        J1_LEAGUE_DIRS["landing_sb_events"] / "sb_events.json",
-        J1_LEAGUE_DIRS["bronze_events"] / "sb_events.parquet",
+        p["landing_sb_events"] / "sb_events.json",
+        p["bronze_events"] / "sb_events.parquet",
         logger,
         description="events",
     )
@@ -21,9 +38,10 @@ def ingest_j1_league_matches(logger):
     """
     Ingest J1 League matches from the landing directory into the bronze layer.
     """
+    p = _get_paths()
     ingest_json_to_parquet(
-        J1_LEAGUE_DIRS["landing_sb_matches"] / "sb_matches.json",
-        J1_LEAGUE_DIRS["bronze_matches"] / "sb_matches.parquet",
+        p["landing_sb_matches"] / "sb_matches.json",
+        p["bronze_matches"] / "sb_matches.parquet",
         logger,
         description="matches",
     )
@@ -32,9 +50,10 @@ def ingest_j1_league_physical(logger):
     """
     Ingest J1 League physical data from the landing directory into the bronze layer.
     """
+    p = _get_paths()
     ingest_json_to_parquet(
-        J1_LEAGUE_DIRS["landing_hudl_physical"] / "hudl_physical.json",
-        J1_LEAGUE_DIRS["bronze_physical"] / "hudl_physical.parquet",
+        p["landing_hudl_physical"] / "hudl_physical.json",
+        p["bronze_physical"] / "hudl_physical.parquet",
         logger,
         description="physical"
     )
@@ -44,8 +63,9 @@ def ingest_j1_league_mappings(logger):
     Ingest all CSV mapping files in the J1 League mappings directory.
     """
     logger.info("Starting J1 League mappings ingestion...")
-    mappings_dir = J1_LEAGUE_DIRS["landing_mappings"]
-    output_dir = J1_LEAGUE_DIRS["bronze_mappings"]
+    p = _get_paths()
+    mappings_dir = p["landing_mappings"]
+    output_dir = p["bronze_mappings"]
     ingest_csv_batch_to_parquet(
         input_dir=mappings_dir,
         output_dir=output_dir,
@@ -63,7 +83,7 @@ def j1_league_ingest(logger=None):
     """
     if logger is None:
         # Setup logger only when this function is called
-        log_path = J1_LEAGUE_DIRS["logs_bronze"] / "j1_league_bronze.log"
+        log_path = LOGS_DIR / "j1_league" / "bronze" / "j1_league_bronze.log"
         logger = setup_logger(log_path, "j1_league_bronze")
     
     logger.info("Starting J1 League bronze layer ingestion...")

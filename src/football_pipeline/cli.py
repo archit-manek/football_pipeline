@@ -12,7 +12,6 @@ import argparse
 import sys
 
 from football_pipeline.utils.constants import SUPPORTED_SOURCES
-from football_pipeline.config import get_processing_config
 
 def create_parser() -> argparse.ArgumentParser:
     """Create the argument parser for the CLI."""
@@ -21,11 +20,10 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  football_pipeline                    # Run with default config settings
-  football_pipeline --bronze          # Run only bronze layer
+  football_pipeline                    # Run bronze for open_data
+  football_pipeline --bronze           # Run only bronze layer
   football_pipeline --source j1_league # Process only J1 League data
-  football_pipeline --all-layers      # Run all layers (bronze, silver, gold)
-  football_pipeline --config-only     # Show current configuration and exit
+  football_pipeline --all-layers       # Run all layers (bronze, silver, gold)
         """
     )
     
@@ -59,37 +57,12 @@ Examples:
         help=f"Data source to process. Options: {', '.join(SUPPORTED_SOURCES)}, or 'all' for all sources"
     )
     
-    # Configuration
-    parser.add_argument(
-        "--config-only", 
-        action="store_true", 
-        help="Show current configuration and exit"
-    )
-    
     return parser
-
-def show_config() -> None:
-    """Display current configuration."""
-    from football_pipeline.config import load_config
-    import yaml
-    
-    config = load_config()
-    print("🔧 Current Football Pipeline Configuration")
-    print("=" * 50)
-    print(yaml.safe_dump(config, default_flow_style=False, indent=2))
 
 def main() -> int:
     """Main CLI entry point."""
     parser = create_parser()
     args = parser.parse_args()
-    
-    # Show config and exit if requested
-    if args.config_only:
-        show_config()
-        return 0
-    
-    # Load configuration
-    processing_config = get_processing_config()
     
     # Determine what layers to run
     if args.all_layers:
@@ -99,13 +72,13 @@ def main() -> int:
         run_silver = args.silver
         run_gold = args.gold
     else:
-        # Use config defaults
-        run_bronze = processing_config.get('bronze', True)
-        run_silver = processing_config.get('silver', False)
-        run_gold = processing_config.get('gold', False)
+        # Defaults: bronze only
+        run_bronze = True
+        run_silver = False
+        run_gold = False
     
     # Determine source
-    source = args.source if args.source else processing_config.get('source', 'open_data')
+    source = args.source if args.source else 'open_data'
     if source == 'all':
         source = None
     
