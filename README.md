@@ -2,21 +2,16 @@
 
 A modular Python pipeline that ingests **StatsBomb open-data**, processes it via the Medallion pattern, and outputs **analysis-ready** Parquet tables plus **ML-ready** features.
 
-**Goal:** let analysts jump straight to notebooks and modeling. One install, one command.
-
 ---
 
-## ✨ What you get
+## What you get
 - **Bronze**: exact mirror of StatsBomb open-data (traceable, immutable).
 - **Silver**: normalized Parquet tables: `events`, `matches`, `lineups`, `three_sixty`.
 - **Gold**: feature tables (e.g., shot angle, distance, xG labels) for ML.
-- **Config-driven**: toggle layers/sources via YAML or CLI flags.
-- **Single CLI**: `football-pipeline` (no hunting for scripts).
-- **Optional extras**: `dev` (lint/tests), `ml` (scikit-learn), `viz` (matplotlib/seaborn/plotly).
 
 ---
 
-## 🚀 Quickstart
+## Quickstart
 
 ```bash
 # 1) Create a venv (Mac/Linux)
@@ -41,7 +36,7 @@ football-pipeline --gold
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 Project config lives at `src/football_pipeline/config/pipeline_config.yaml`.
 
@@ -60,11 +55,6 @@ directories:
   logs: "logs"
 ```
 
-Override the config file path:
-```bash
-football-pipeline --config src/football_pipeline/config/pipeline_config.yaml
-```
-
 CLI flags override YAML defaults:
 ```bash
 # run only bronze regardless of YAML
@@ -76,11 +66,11 @@ football-pipeline --all-layers --source all
 
 ---
 
-## 📦 Outputs
+## Outputs
 
 ```
 data/
-  landing/                      # raw drops (if you use them)
+  landing/                      # raw (if you use them)
   bronze/
     open_data/
       data/{events,lineups,matches,three-sixty}/...
@@ -100,7 +90,7 @@ logs/
 
 ---
 
-## 📖 Example: load Silver in a notebook
+## Example: load Silver in a notebook
 
 **Pandas**
 ```python
@@ -114,33 +104,6 @@ matches = pd.read_parquet("data/silver/open_data/matches")
 import polars as pl
 events = pl.scan_parquet("data/silver/open_data/events/*.parquet").collect()
 ```
-
-Now you’re ready for feature exploration, modeling, and plots.
-
----
-
-## 🛠️ Developer install (contributors)
-
-```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e .[dev,ml,viz]
-
-### Adding a dependency (don’t use `pip install <pkg>` directly)
-1. Edit `pyproject.toml`:
-   ```toml
-   [project]
-   dependencies = [
-     "pandas>=2.3",
-     "polars>=1.30",
-     # add here
-   ]
-   ```
-2. Reinstall:
-   ```bash
-   pip install -e .[dev,ml,viz]
-   ```
-
-This keeps installs reproducible for everyone.
 
 ---
 
@@ -157,14 +120,11 @@ football-pipeline --gold           # gold only
 football-pipeline --all-layers     # bronze + silver + gold
 football-pipeline --source j1_league
 football-pipeline --source all
-football-pipeline --config-only    # print active config and exit
-football-pipeline --config path/to/pipeline_config.yaml
--v / -q                            # verbose / quiet logging
 ```
 
 ---
 
-## 📁 Repo layout (high level)
+## Repo layout (high level)
 
 ```
 src/football_pipeline/
@@ -177,16 +137,6 @@ src/football_pipeline/
   gold/ ...              # feature engineering
   utils/ ...             # dirs, logging, constants
 ```
-
----
-
-## 🙋 FAQ
-
-**Q: Do I need to touch the data-engineering code?**  
-A: Not to get started. Run Bronze → Silver (and optionally Gold) using the CLI and start analysis on the Parquet outputs. Improve DE only if you need new features/sources.
-
-**Q: Where are the StatsBomb files?**  
-A: Bronze mirrors the original `open-data/data/...` structure for easy auditing.
 
 ---
 
