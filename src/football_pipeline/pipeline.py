@@ -12,8 +12,6 @@ from football_pipeline.utils.logging import setup_logger
 from football_pipeline.bronze.open_data.ingest import open_data_ingest
 from football_pipeline.bronze.j1_league.ingest import j1_league_ingest
 
-# Silver layer imports
-from football_pipeline.silver.open_data.competitions import process_competitions_data
 
 # Gold layer imports
 # TODO: Import gold layer functions when implemented
@@ -108,7 +106,6 @@ def run_silver_layer(source_name: str | None = None):
         try:
             match source:
                 case "open_data":
-                    process_competitions_data()
                     logger.info(f"✓ {source} silver layer completed successfully")
                 case "j1_league":
                     logger.info(f"⚠ {source} silver layer not yet implemented")

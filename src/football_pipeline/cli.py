@@ -6,8 +6,6 @@ Run the medallion pipeline (bronze/silver/gold) against one or all data sources.
 Keeps the surface area small and obvious.
 """
 
-from __future__ import annotations
-
 import argparse
 import sys
 
@@ -22,7 +20,7 @@ def create_parser() -> argparse.ArgumentParser:
 Examples:
   football_pipeline                    # Run bronze for open_data
   football_pipeline --bronze           # Run only bronze layer
-  football_pipeline --source j1_league # Process only J1 League data
+  football_pipeline --source all       # Process all data sources
   football_pipeline --all-layers       # Run all layers (bronze, silver, gold)
         """
     )
