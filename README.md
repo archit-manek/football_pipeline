@@ -1,3 +1,5 @@
+# ⚠️ Project Status: Archived
+
 # Football Analytics Pipeline
 
 A Python pipeline for football data analysis. Ingests StatsBomb open-data and J1 League data through a Bronze-Silver-Gold medallion architecture, outputting clean Parquet files ready for analysis and ML.
